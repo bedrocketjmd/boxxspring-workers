@@ -18,7 +18,7 @@ namespace :worker do
       spinner = %w{| / - \\}
       worker = worker_class.new
       print 'working...  ' 
-      Worker.configuration.logger.info(
+      Boxxspring::Worker.configuration.logger.info(
         "The #{worker_name.humanize.downcase} worker has started." 
       )
       begin
@@ -27,14 +27,14 @@ namespace :worker do
           begin
             sleep 1.second unless worker.process
           rescue StandardError => exception 
-            Worker.configuration.logger.error(
+            Boxxspring::Worker.configuration.logger.error(
               "The #{worker_name.humanize.downcase} worker failed. " +
               ( exception.respond_to?( :message ) ? exception.message.to_s : '' )
             )          
           end
         end
       rescue SystemExit, Interrupt
-        Worker.configuration.logger.info(
+        Boxxspring::Worker.configuration.logger.info(
           "The #{worker_name.humanize.downcase} worker has stopped." 
         )
         puts 'stopped'
