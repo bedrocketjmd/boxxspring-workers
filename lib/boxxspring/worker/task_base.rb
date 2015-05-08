@@ -52,6 +52,9 @@ module Boxxspring
                 end
               elsif task.is_a?( Boxxspring::Error )
                 # TODO: handle error
+                self.logger.info(  
+                    "Unable to read task."
+                  )
               else
                 # TODO: handle unexpected condition
               end
