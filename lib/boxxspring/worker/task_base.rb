@@ -66,7 +66,7 @@ module Boxxspring
         # self.task_operation( property_id ).where( id: task_id ).read
         Boxxspring::Operation.new( 
           "/properties/#{property_id}/tasks/#{task_id}",
-          Worker.configuration.api_credentials 
+          Worker.configuration.api_credentials.to_hash
         ).read      
       end
 
@@ -84,14 +84,14 @@ module Boxxspring
       protected; def task_operation( property_id )
         Boxxspring::Operation.new( 
           "/properties/#{ property_id }/tasks",
-          Worker.configuration.api_credentials 
+          Worker.configuration.api_credentials.to_hash
         )
       end
 
       protected; def task_property_read( task, include = nil )
         operation = Boxxspring::Operation.new( 
           "/properties/#{ task.property_id }", 
-          Worker.configuration.api_credentials 
+          Worker.configuration.api_credentials.to_hash
         )
         operation = operation.include( include ) unless ( include.blank? ) 
         operation.read
