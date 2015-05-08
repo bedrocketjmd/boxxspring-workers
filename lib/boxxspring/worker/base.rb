@@ -20,9 +20,17 @@ module Boxxspring
         end
 
         def queue
-          @queue ||= Aws::SQS::Resource.new.create_queue( 
-            queue_name: self.full_queue_name 
-          )
+          @queue ||= Aws::SQS::Client.new
+        end
+
+        def queue_url
+          unless @queue_url.present?
+            response = self.queue.create_queue( 
+              queue_name: self.full_queue_name 
+            )
+            @queue_url = response[ :queue_url ]       
+          end
+          @queue_url
         end
 
         protected; def full_queue_name
@@ -79,10 +87,28 @@ module Boxxspring
       protected; def receive_message
         message = nil
         begin
-          message = self.class.queue.receive_messages.first
+          response = self.class.queue.receive_message( 
+            queue_url: self.class.queue_url 
+          )
+          messages = response[ :messages ]
+          message = messages.first
         rescue StandardError => error
           raise RuntimeError.new( 
-            "The worker is unable to access the queue. #{error.message}."
+            "The worker is unable to receive a message from the queue. #{error.message}."
+          )
+        end
+        message
+      end
+
+      protected; def delete_message( message )
+        begin
+          self.class.queue.delete_message( 
+            queue_url: self.class.queue_url,
+            receipt_handle: message[ :receipt_handle ]
+          )
+        rescue StandardError => error
+          raise RuntimeError.new( 
+            "The worker is unable to delete the message from the queue. #{error.message}."
           )
         end
         message
