@@ -57,7 +57,7 @@ module Boxxspring
             begin
               self.process_payload( payload )
               # note: if an exception is raised the message will not be deleted
-              message.delete
+              delete_message( message )
               rescue StandardError => error
                 raise RuntimeError.new( 
                   "The worker failed to process the payload. #{error.message}."
@@ -65,7 +65,7 @@ module Boxxspring
             end
           else
             # note: messages with invalid payloads are deleted
-            message.delete
+            delete_message( message )
 
             raise RuntimeError.new( 
               "The worker received an invalid payload."
