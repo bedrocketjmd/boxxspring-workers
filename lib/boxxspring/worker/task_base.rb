@@ -18,7 +18,7 @@ module Boxxspring
           self.class.processor.call( task )
         else
           raise RuntimeError.new( 
-            "The worker #{self.class.name} lacks a task processor"
+            "The #{self.human_name} worker lacks a task processor"
           )
         end
       end
@@ -53,8 +53,9 @@ module Boxxspring
               elsif task.is_a?( Boxxspring::Error )
                 # TODO: handle error
                 self.logger.info(  
-                    "Unable to read task."
-                  )
+                  "The #{self.human_name} is unable to find the task with " + 
+                  "the id."
+                )
               else
                 # TODO: handle unexpected condition
               end
