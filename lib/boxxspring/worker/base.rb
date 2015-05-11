@@ -2,6 +2,9 @@ module Boxxspring
 
   module Worker
 
+    QUEUE_MESSAGE_REQUEST_COUNT   = 10
+    QUEUE_MESSAGE_WAIT_IN_SECONDS = 2
+
     class Base
 
       #------------------------------------------------------------------------
@@ -15,7 +18,7 @@ module Boxxspring
 
       class << self 
 
-        def process( &block )
+        public; def process( &block )
           self.processor = block
         end
 
@@ -44,36 +47,37 @@ module Boxxspring
                       gsub( /[\/]/, '-' ).
                       gsub( /_worker\Z/, '' ) )
         end
+
       end
 
       #------------------------------------------------------------------------
       # operations
 
       def process 
-        message = self.receive_message
-        if message.present?
-          payload = payload_from_message( message )
-          if payload.present?
-            begin
-              self.process_payload( payload )
-              # note: if an exception is raised the message will not be deleted
-              delete_message( message )
+        messages = self.receive_messages() || [] 
+        messages.each do | message |
+          if message.present?
+            payload = self.payload_from_message( message )
+            if payload.present?
+              begin
+                self.process_payload( payload )
+                # note: if an exception is raised the message will not be 
+                #       deleted
+                self.delete_message( message )
               rescue StandardError => error
-                raise RuntimeError.new( 
-                  "The worker failed to process the payload. #{error.message}."
+                self.logger.error(
+                  "The #{ self.human_name } worker failed to process the " + 
+                  "payload. #{error.message}."
                 )
+              end
+            else
+              # note: messages with invalid payloads are deleted
+              self.delete_message( message )
+              self.logger.error(
+                "The #{ self.human_name } worker received an invalid payload."
+              )
             end
-          else
-            # note: messages with invalid payloads are deleted
-            delete_message( message )
-
-            raise RuntimeError.new( 
-              "The worker received an invalid payload."
-            )
           end
-          true
-        else
-          false
         end
       end
 
@@ -84,20 +88,22 @@ module Boxxspring
       #------------------------------------------------------------------------
       # implementation
 
-      protected; def receive_message
-        message = nil
+      protected; def receive_messages
+        messages = nil
         begin
           response = self.class.queue.receive_message( 
-            queue_url: self.class.queue_url 
+            queue_url: self.class.queue_url,
+            max_number_of_messages: QUEUE_MESSAGE_REQUEST_COUNT,
+            wait_time_seconds: QUEUE_MESSAGE_WAIT_IN_SECONDS 
           )
           messages = response[ :messages ]
-          message = messages.first
         rescue StandardError => error
           raise RuntimeError.new( 
-            "The worker is unable to receive a message from the queue. #{error.message}."
+            "The #{ self.human_name } worker is unable to receive a message " +
+            "from the queue. #{error.message}."
           )
         end
-        message
+        messages
       end
 
       protected; def delete_message( message )
@@ -108,7 +114,8 @@ module Boxxspring
           )
         rescue StandardError => error
           raise RuntimeError.new( 
-            "The worker is unable to delete the message from the queue. #{error.message}."
+            "The #{ self.human_name } worker is unable to delete the " + 
+            "message from the queue. #{error.message}."
           )
         end
         message
@@ -138,6 +145,13 @@ module Boxxspring
             "The worker lacks a processor"
           )
         end
+      end
+
+      protected; def human_name
+        self.class.name.  
+          underscore.
+          gsub( /[\/]/, ' ' ).
+          gsub( / worker\Z/, '' )
       end
 
     end
