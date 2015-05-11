@@ -3,7 +3,7 @@ module Boxxspring
   module Worker
 
     QUEUE_MESSAGE_REQUEST_COUNT   = 10
-    QUEUE_MESSAGE_WAIT_IN_SECONDS = 2
+    QUEUE_MESSAGE_WAIT_IN_SECONDS = 4
 
     class Base
 
