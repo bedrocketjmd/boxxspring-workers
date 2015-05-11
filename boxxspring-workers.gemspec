@@ -23,7 +23,7 @@ Gem::Specification.new do | gem |
   gem.add_runtime_dependency( "remote_syslog_logger", "~> 1.0" )
 
   gem.add_development_dependency( "pry", "~> 0.10" )
-  gem.add_development_dependency( "pry-byebug", "~> 3.10" )
+  gem.add_development_dependency( "pry-byebug", "~> 3.1" )
 
 end
 
