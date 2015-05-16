@@ -97,8 +97,21 @@ module Boxxspring
           "/properties/#{ task.property_id }", 
           Worker.configuration.api_credentials.to_hash
         )
-        operation = operation.include( include ) unless ( include.blank? ) 
+        operation = operation.include( include ) \
+          unless ( include.blank? ) 
         operation.read
+      end
+
+      protected; def task_delegate( queue_name, task )
+        serializer = Boxxspring::Serializer.new( task )
+        payload = serializer.serialize( 'tasks' )
+        payload.merge!( { 
+          '$this' => { 
+            'type_name' => 'tasks', 
+            'unlimited_count' => 1
+          }
+        } )
+        self.delegate_payload( queue_name, payload )
       end
 
     end

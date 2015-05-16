@@ -147,6 +147,26 @@ module Boxxspring
         end
       end
 
+      protected; def delegate_payload( queue_name, payload )
+        begin
+          response = self.queue_interface.create_queue( 
+            queue_name: queue_name 
+          )
+          queue_url = response[ :queue_url ]       
+          if queue_url.present?
+            self.queue_interface.send_message(
+              queue_url: queue_url,
+              message_body: payload.to_json
+            )
+          end
+        rescue StandardError => error
+          raise RuntimeError.new( 
+            "The #{ self.human_name } worker was unable to delegate the " + 
+            "payload to the queue name '#{ queue_name }'. #{error.message}."
+          )
+        end
+      end
+
       protected; def human_name
         self.class.name.  
           underscore.
