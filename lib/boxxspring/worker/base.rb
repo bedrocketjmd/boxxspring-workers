@@ -22,13 +22,13 @@ module Boxxspring
           self.processor = block
         end
 
-        def queue
-          @queue ||= Aws::SQS::Client.new
+        def queue_interface
+          @queue_interface ||= Aws::SQS::Client.new
         end
 
         def queue_url
           unless @queue_url.present?
-            response = self.queue.create_queue( 
+            response = self.queue_interface.create_queue( 
               queue_name: self.full_queue_name 
             )
             @queue_url = response[ :queue_url ]       
@@ -91,7 +91,7 @@ module Boxxspring
       protected; def receive_messages
         messages = nil
         begin
-          response = self.class.queue.receive_message( 
+          response = self.class.queue_interface.receive_message( 
             queue_url: self.class.queue_url,
             max_number_of_messages: QUEUE_MESSAGE_REQUEST_COUNT,
             wait_time_seconds: QUEUE_MESSAGE_WAIT_IN_SECONDS 
@@ -108,7 +108,7 @@ module Boxxspring
 
       protected; def delete_message( message )
         begin
-          self.class.queue.delete_message( 
+          self.class.queue_interface.delete_message( 
             queue_url: self.class.queue_url,
             receipt_handle: message[ :receipt_handle ]
           )
