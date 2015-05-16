@@ -24,14 +24,7 @@ namespace :worker do
       begin
         loop do 
           print "\b" + spinner.rotate!.first
-          begin
-            sleep 1.second unless worker.process
-          rescue StandardError => exception 
-            Boxxspring::Worker.configuration.logger.error(
-              "The #{worker_name.humanize.downcase} worker failed. " +
-              ( exception.respond_to?( :message ) ? exception.message.to_s : '' )
-            )          
-          end
+          worker.process
         end
       rescue SystemExit, Interrupt
         Boxxspring::Worker.configuration.logger.info(
