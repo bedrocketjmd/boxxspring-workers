@@ -27,6 +27,7 @@ module Boxxspring
       # implementation
 
       protected; def process_payload( payload )
+
         result = false
         type_names = self.task_type_name.blank? ? 
           nil : 
@@ -50,19 +51,18 @@ module Boxxspring
                     "The task (id: #{task.id}) processing has ended."
                   )
                 end
-              elsif task.is_a?( Boxxspring::Error )
-                # TODO: handle error
-                self.logger.info(  
-                  "The #{self.human_name} is unable to find the task with " + 
-                  "the id."
-                )
               else
-                # TODO: handle unexpected condition
+                self.logger.info(  
+                  "The #{self.human_name} worker is unable to retrieve the " +
+                  "task with the id #{task[ 'id' ]}."
+                )
               end
             end
           end
         end
+
         result
+      
       end
 
       protected; def task_read( property_id, task_id )
