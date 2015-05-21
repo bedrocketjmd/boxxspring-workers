@@ -148,8 +148,9 @@ module Boxxspring
       end
 
       protected; def delegate_payload( queue_name, payload )
-        queue_name = ( ENV[ 'USER' ] || 'development' ) + '-' + queue_name \
-          if ( Worker.env == 'development' )
+        queue_name_prefix = ( Worker.env == 'development' ) ?
+          ( ENV[ 'USER' ] || 'development' ) : Worker.env 
+       queue_name = queue_name_prefix + '-' + queue_name
         begin
           response = self.class.queue_interface.create_queue( 
             queue_name: queue_name 
