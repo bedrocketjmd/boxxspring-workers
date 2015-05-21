@@ -148,13 +148,15 @@ module Boxxspring
       end
 
       protected; def delegate_payload( queue_name, payload )
+        queue_name = ( ENV[ 'USER' ] || 'development' ) + '-' + queue_name \
+          if ( Worker.env == 'development' )
         begin
-          response = self.queue_interface.create_queue( 
+          response = self.class.queue_interface.create_queue( 
             queue_name: queue_name 
           )
           queue_url = response[ :queue_url ]       
           if queue_url.present?
-            self.queue_interface.send_message(
+            self.class.queue_interface.send_message(
               queue_url: queue_url,
               message_body: payload.to_json
             )
