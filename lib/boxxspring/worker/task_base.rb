@@ -39,8 +39,9 @@ module Boxxspring
         tasks = payload[ 'tasks' ]
         if ( tasks.present? && tasks.respond_to?( :each ) ) 
           tasks.each do | task |
+            task_id = task[ 'id' ]
             if ( type_names.blank? || type_names.include?( task[ 'type_name'] ) )
-              task = task_read( task[ 'property_id' ], task[ 'id' ] )
+              task = task_read( task[ 'property_id' ], task_id )
               if task.is_a?( Boxxspring::Task )
                 if ( states.blank? || states.include?( task.state ) )
                   self.logger.info(  
@@ -54,7 +55,7 @@ module Boxxspring
               else
                 self.logger.info(  
                   "The #{self.human_name} worker is unable to retrieve the " +
-                  "task with the id #{task[ 'id' ]}."
+                  "task with the id #{task_id}."
                 )
               end
             end
@@ -97,8 +98,21 @@ module Boxxspring
           "/properties/#{ task.property_id }", 
           Worker.configuration.api_credentials.to_hash
         )
-        operation = operation.include( include ) unless ( include.blank? ) 
+        operation = operation.include( include ) \
+          unless ( include.blank? ) 
         operation.read
+      end
+
+      protected; def task_delegate( queue_name, task )
+        serializer = Boxxspring::Serializer.new( task )
+        payload = serializer.serialize( 'tasks' )
+        payload.merge!( { 
+          '$this' => { 
+            'type_name' => 'tasks', 
+            'unlimited_count' => 1
+          }
+        } )
+        self.delegate_payload( queue_name, payload )
       end
 
     end
