@@ -40,17 +40,27 @@ module Boxxspring
         if ( tasks.present? && tasks.respond_to?( :each ) ) 
           tasks.each do | task |
             task_id = task[ 'id' ]
-            if ( type_names.blank? || type_names.include?( task[ 'type_name'] ) )
+            if ( type_names.blank? || type_names.include?( task[ 'type_name' ] ) )
               task = task_read( task[ 'property_id' ], task_id )
               if task.is_a?( Boxxspring::Task )
                 if ( states.blank? || states.include?( task.state ) )
                   self.logger.info(  
                     "The task (id: #{task.id}) processing has started."
                   )
-                  result = self.process_task( task )
-                  self.logger.info(  
-                    "The task (id: #{task.id}) processing has ended."
-                  )
+                  begin
+                    result = self.process_task( task )
+                    self.logger.info(  
+                      "The task (id: #{task.id}) processing has ended."
+                    )
+                  rescue StandardError => error
+                    task = task_write_state( 
+                      task, 
+                      'failed', 
+                      "The task (id: #{task.id}) processing has failed."
+                    )
+                    self.logger.error( error.message )
+                    self.logger.error( error.backtrace.join( "\n" ) )
+                  end
                 end
               else
                 self.logger.info(  
@@ -80,7 +90,8 @@ module Boxxspring
       end
 
       protected; def task_write_state( task, state, message )
-        self.logger.info( message ) unless message.blank?
+        self.logger.send( ( state == 'failed' ? 'error' : 'info' ), message ) \
+          unless message.blank?
         task.state = state
         task.message = message
         self.task_write( task )
