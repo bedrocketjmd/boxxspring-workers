@@ -38,6 +38,13 @@ module Boxxspring
       result
     end
 
+    def delete( id )
+      db_record = self.db.delete_attributes(
+        domain_name:      @db_name,
+        item_name:        id.to_s
+      )
+    end
+
     protected; def db 
       @db ||= begin 
         db = Aws::SimpleDB::Client.new
