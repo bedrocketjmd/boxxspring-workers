@@ -18,6 +18,7 @@ namespace :worker do
       spinner = %w{| / - \\}
       worker = worker_class.new
       print 'working...  ' 
+      worker_name = ENV[ 'LOG_SYSTEM' ] if worker_name == "worker" 
       Boxxspring::Worker.configuration.logger.info(
         "The #{worker_name.humanize.downcase} worker has started." 
       )
@@ -27,6 +28,7 @@ namespace :worker do
           worker.process
         end
       rescue SystemExit, Interrupt
+        worker_name = ENV[ 'LOG_SYSTEM' ] if worker_name == "worker" 
         Boxxspring::Worker.configuration.logger.info(
           "The #{worker_name.humanize.downcase} worker has stopped." 
         )
