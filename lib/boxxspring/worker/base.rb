@@ -67,8 +67,10 @@ module Boxxspring
               rescue StandardError => error
                 self.logger.error(
                   "The #{ self.human_name } worker failed to process the " + 
-                  "payload. #{error.message}."
+                  "payload. "
                 )
+                self.logger.error( error.message )
+                self.logger.error( error.backtrace.join( "\n" ) )
               end
             else
               # note: messages with invalid payloads are deleted
