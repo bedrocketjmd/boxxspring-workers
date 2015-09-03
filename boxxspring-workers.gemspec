@@ -20,6 +20,7 @@ Gem::Specification.new do | gem |
 
   gem.add_runtime_dependency( "aws-sdk", "~> 2" )
   gem.add_runtime_dependency( "boxxspring", "~> 2" )
+  gem.add_runtime_dependency( "redis", "~> 3.2.1" )
   gem.add_runtime_dependency( "remote_syslog_logger", "~> 1.0" )
 
   gem.add_development_dependency( "pry", "~> 0.10" )

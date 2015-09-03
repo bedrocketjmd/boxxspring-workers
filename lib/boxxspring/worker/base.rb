@@ -74,7 +74,7 @@ module Boxxspring
               end
             else
               # note: messages with invalid payloads are deleted
-              self.delete_message( message )
+              self.delete_message( message ) unless @retain_message
               self.logger.error(
                 "The #{ self.human_name } worker received an invalid payload."
               )
@@ -121,6 +121,10 @@ module Boxxspring
           )
         end
         message
+      end
+
+      def retain_message!
+        @retain_message = true
       end
 
       protected; def payload_from_message( message )
