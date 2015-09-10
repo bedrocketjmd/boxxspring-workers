@@ -60,10 +60,10 @@ module Boxxspring
             payload = self.payload_from_message( message )
             if payload.present?
               begin
-                self.process_payload( payload )
+                result = self.process_payload( payload )
                 # note: if an exception is raised the message will not be 
                 #       deleted
-                self.delete_message( message ) unless @retain_message
+                self.delete_message( message ) unless result === false
               rescue StandardError => error
                 self.logger.error(
                   "The #{ self.human_name } worker failed to process the " + 
@@ -121,10 +121,6 @@ module Boxxspring
           )
         end
         message
-      end
-
-      def retain_message!
-        @retain_message = true
       end
 
       protected; def payload_from_message( message )
