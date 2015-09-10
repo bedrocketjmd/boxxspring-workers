@@ -63,7 +63,7 @@ module Boxxspring
                 result = self.process_payload( payload )
                 # note: if an exception is raised the message will not be 
                 #       deleted
-                self.delete_message( message ) unless result === false
+                self.delete_message( message ) unless result == false
               rescue StandardError => error
                 self.logger.error(
                   "The #{ self.human_name } worker failed to process the " + 
