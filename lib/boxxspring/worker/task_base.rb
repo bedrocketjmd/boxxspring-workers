@@ -28,7 +28,7 @@ module Boxxspring
 
       protected; def process_payload( payload )
 
-        result = false
+        result = true
         type_names = self.task_type_name.blank? ? 
           nil : 
           [ self.task_type_name ].flatten
@@ -49,8 +49,10 @@ module Boxxspring
                   )
                   begin
                     result = self.process_task( task )
+                    message = "The task (id: #{task.id}) processing has ended"
+                    message += " and the message has been retained." if result == false
                     self.logger.info(  
-                      "The task (id: #{task.id}) processing has ended."
+                      message
                     )
                   rescue StandardError => error
                     task = task_write_state( 
