@@ -61,8 +61,7 @@ module Boxxspring
             if payload.present?
               begin
                 result = self.process_payload( payload )
-                # note: if an exception is raised the message will not be 
-                #       deleted
+                # note: if an exception is raised the message will be deleted
                 self.delete_message( message ) unless result == false
               rescue StandardError => error
                 self.logger.error(
