@@ -54,7 +54,7 @@ module Boxxspring
                     self.logger.info(  
                       message
                     )
-                  rescue StandardError => error
+                  rescue SignalException, StandardError => error
                     task = task_write_state( 
                       task, 
                       'failed', 
