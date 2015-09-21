@@ -175,7 +175,7 @@ module Boxxspring
         self.class.name.  
           underscore.
           gsub( /[\/]/, ' ' ).
-          gsub( / worker\Z/, '' )
+          gsub( /_worker\Z/, '' )
       end
 
     end
