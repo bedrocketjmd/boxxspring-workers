@@ -55,9 +55,14 @@ module Boxxspring
                       message
                     )
                   rescue SignalException, StandardError => error
+                    if error.is_a?(SignalException)
+                      task_state = 'idle'
+                    else
+                      task_state = 'failed'
+                    end
                     task = task_write_state( 
-                      task, 
-                      'failed', 
+                      task,
+                      task_state,
                       "The task (id: #{task.id}) processing has failed."
                     )
                     self.logger.error( error.message )
