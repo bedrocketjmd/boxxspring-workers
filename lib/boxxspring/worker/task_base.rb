@@ -67,6 +67,7 @@ module Boxxspring
                                             task_message)
                     self.logger.error( error.message )
                     self.logger.error( error.backtrace.join( "\n" ) )
+                    raise error if error.is_a?( SignalException )
                   end
                 end
               else
