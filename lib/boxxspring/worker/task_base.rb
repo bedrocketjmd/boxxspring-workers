@@ -70,8 +70,11 @@ module Boxxspring
                     raise error if error.is_a?( SignalException )
                   end
                 end
+              elsif task.is_a?(Array) &&
+                    task.first.is_a?(Boxxspring::ForbiddenError)
+                self.logger.error(task.first.message)
               else
-                self.logger.info(  
+                self.logger.error(
                   "The #{self.human_name} worker is unable to retrieve the " +
                   "task with the id #{task_id}."
                 )
