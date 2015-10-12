@@ -137,6 +137,13 @@ module Boxxspring
         self.delegate_payload( queue_name, payload )
       end
 
+      protected; def operation(endpoint)
+        Boxxspring::Operation.new(
+          endpoint,
+          Boxxspring::Worker.configuration.api_credentials.to_hash
+        )
+      end
+
     end
 
   end
