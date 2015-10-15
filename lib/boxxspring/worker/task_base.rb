@@ -70,8 +70,11 @@ module Boxxspring
                     raise error if error.is_a?( SignalException )
                   end
                 end
+              elsif task.is_a?(Array) &&
+                    task.first.is_a?(Boxxspring::ForbiddenError)
+                self.logger.error(task.first.message)
               else
-                self.logger.info(  
+                self.logger.error(
                   "The #{self.human_name} worker is unable to retrieve the " +
                   "task with the id #{task_id}."
                 )
@@ -132,6 +135,13 @@ module Boxxspring
           }
         } )
         self.delegate_payload( queue_name, payload )
+      end
+
+      protected; def operation(endpoint)
+        Boxxspring::Operation.new(
+          endpoint,
+          Boxxspring::Worker.configuration.api_credentials.to_hash
+        )
       end
 
     end

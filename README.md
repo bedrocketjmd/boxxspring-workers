@@ -1,4 +1,3 @@
-boxxspring-ruby-client
+Boxxspring Worker SDK
 =====================
 
-The Boxxspring ruby client.
