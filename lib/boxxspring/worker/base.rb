@@ -170,6 +170,13 @@ module Boxxspring
         end
       end
 
+      protected; def operation(endpoint)
+        Boxxspring::Operation.new(
+          endpoint,
+          Boxxspring::Worker.configuration.api_credentials.to_hash
+        )
+      end
+
       protected; def human_name
         self.class.name.  
           underscore.
