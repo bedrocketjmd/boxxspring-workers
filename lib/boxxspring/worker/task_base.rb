@@ -42,6 +42,7 @@ module Boxxspring
             task_id = task[ 'id' ]
             if ( type_names.blank? || type_names.include?( task[ 'type_name' ] ) )
               task = task_read( task[ 'property_id' ], task_id )
+              self.logger.warn( "Task is #{task}" )
               if task.is_a?( Boxxspring::Task )
                 if ( states.blank? || states.include?( task.state ) )
                   self.logger.info(  
