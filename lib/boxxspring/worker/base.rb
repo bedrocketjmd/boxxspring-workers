@@ -65,8 +65,7 @@ module Boxxspring
                 self.delete_message( message ) unless result == false
               rescue StandardError => error
                 self.logger.error(
-                  "The #{ self.human_name } worker failed to process the " + 
-                  "payload. "
+                  "The #{ self.human_name } worker failed to process the payload."
                 )
                 self.logger.error( error.message )
                 self.logger.error( error.backtrace.join( "\n" ) )
@@ -169,6 +168,13 @@ module Boxxspring
             "payload to the queue name '#{ queue_name }'. #{error.message}."
           )
         end
+      end
+
+      protected; def operation(endpoint)
+        Boxxspring::Operation.new(
+          endpoint,
+          Boxxspring::Worker.configuration.api_credentials.to_hash
+        )
       end
 
       protected; def human_name
