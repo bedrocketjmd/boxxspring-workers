@@ -65,6 +65,20 @@ module Boxxspring
                     task = task_write_state(task,
                                             task_state,
                                             task_message)
+
+                    if task.class.to_s.include?("Distribution")
+                      distribution_operation.state   = task.state
+                      distribution_operation.message = task.message
+
+                      if artifact_locator
+                        distribution_operation.artifact_locator_id = artifact_locator.id
+                      end
+
+                      operation(
+                        "/properties/#{task.property_id}/distribution_operations"
+                      ).write("distribution_operations", distribution_operation).first
+                    end
+
                     self.logger.error( error.message )
                     self.logger.error( error.backtrace.join( "\n" ) )
                     raise error if error.is_a?( SignalException )
@@ -137,6 +151,13 @@ module Boxxspring
         self.delegate_payload( queue_name, payload )
       end
 
+      private; def distribution_operation
+        @distribution_operation ||= begin
+          operation(
+            "/properties/#{task.property_id}/distribution_operations/#{task.subject_id}"
+          ).read
+        end
+      end
     end
 
   end
