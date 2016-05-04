@@ -88,14 +88,16 @@ module Boxxspring
         @logger ||= begin
           worker_name = human_name.gsub( ' ','_' )
           worker_env = self.class.environment
+          port = ( worker_env == 'production' ) ? 54323 : 48686
+          host_suffix = ( worker_env == 'production' ) ? '' : worker_env
 
           Boxxspring::Worker.configuration do
             logger(
               RemoteSyslogLogger.new(
                 'logs2.papertrailapp.com',
-                ENV['REMOTE_LOGGER_PORT'],
+                port,
                 program: worker_name,
-                local_hostname: "#{ ENV['LOG_SYSTEM'] }.#{ worker_env }"
+                local_hostname: "#{ ENV['LOG_SYSTEM'] }.#{ host_suffix }"
               )
             )
 

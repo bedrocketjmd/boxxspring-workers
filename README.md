@@ -52,5 +52,4 @@ Boxxspring::Operation.new(
 ```
 
 ### Environment variables
-- `REMOTE_LOGGER_PORT`: Specify this for Papertrail to distinguish between development and production logs. Previously the port was written in Boxxspring Workers initialization in each app.
 - `LOG_LEVEL`: When set to `debug`, the worker will log messages that are restricted to debug mode.
