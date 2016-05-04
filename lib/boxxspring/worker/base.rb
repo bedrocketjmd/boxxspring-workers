@@ -12,6 +12,7 @@ module Boxxspring
 
       class_attribute :queue_name
       class_attribute :processor
+      class_attribute :environment
 
       #------------------------------------------------------------------------
       # class methods
@@ -47,7 +48,7 @@ module Boxxspring
           queue_name = self.queue_name ||
                        self.name.underscore.gsub( /[\/]/, '-' ).
                          gsub( /_worker\Z/, '' )
-          environment += '-' + queue_name
+          self.environment + '-' + queue_name
         end
 
       end
@@ -83,8 +84,26 @@ module Boxxspring
         end
       end
 
-      protected; def logger
-        @logger ||= Boxxspring::Worker.configuration.logger
+      def logger
+        @logger ||= begin
+          worker_name = human_name.gsub( ' ','_' )
+          worker_env = self.class.environment
+
+          Boxxspring::Worker.configuration do
+            logger(
+              RemoteSyslogLogger.new(
+                'logs2.papertrailapp.com',
+                ENV['REMOTE_LOGGER_PORT'],
+                program: worker_name,
+                local_hostname: "#{ ENV['LOG_SYSTEM'] }.#{ worker_env }"
+              )
+            )
+
+            level = ENV['LOG_LEVEL'].present? ? ENV['LOG_LEVEL'].upcase : 'INFO'
+            logger.level = "Logger::#{ level }".constantize
+          end
+          Boxxspring::Worker.configuration.logger
+        end
       end
 
       def debug_mode?
