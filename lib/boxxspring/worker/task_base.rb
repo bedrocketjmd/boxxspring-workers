@@ -60,8 +60,7 @@ module Boxxspring
                     end
                     task = task_write_state( task, task_state, task_message )
                     self.logger.error( error.message )
-                    self.logger.info( error.backtrace.join( "\n" ) ) \
-                      if self.debug_mode?
+                    self.logger.info( error.backtrace.join( "\n" ) )
                     raise error if error.is_a?( SignalException )
                   end
                 end

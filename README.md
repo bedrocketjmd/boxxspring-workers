@@ -24,7 +24,7 @@ rescue StandardError => error
     "The #{ self.human_name } worker failed to process the payload."
   )
   self.logger.error( error.message )
-  self.logger.info( error.backtrace.join( "\n" ) ) if debug_mode?
+  self.logger.info( error.backtrace.join( "\n" ) )
 ```
 
 - Messages are deleted if the payload is invalid or not meant for it `self.delete_message( message )`

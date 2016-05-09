@@ -72,7 +72,7 @@ module Boxxspring
                   "The #{ self.human_name } failed to process the payload."
                 )
                 self.logger.error( error.message )
-                self.logger.info( error.backtrace.join( "\n" ) ) if debug_mode?
+                self.logger.info( error.backtrace.join( "\n" ) )
               end
             else
               self.delete_message( message )
@@ -89,7 +89,7 @@ module Boxxspring
           worker_name = human_name.gsub( ' ','_' )
           worker_env = self.class.environment
           port = ( worker_env == 'production' ) ? 54323 : 48686
-          host_suffix = ( worker_env == 'production' ) ? '' : worker_env
+          host_suffix = ( worker_env == 'production' ) ? '' : ".#{ worker_env }"
 
           Boxxspring::Worker.configuration do
             logger(
@@ -97,7 +97,7 @@ module Boxxspring
                 'logs2.papertrailapp.com',
                 port,
                 program: worker_name,
-                local_hostname: "#{ ENV['LOG_SYSTEM'] }.#{ host_suffix }"
+                local_hostname: "#{ ENV['LOG_SYSTEM'] }#{ host_suffix }"
               )
             )
 
