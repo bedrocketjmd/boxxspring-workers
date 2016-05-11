@@ -12,6 +12,7 @@ module Boxxspring
 
       class_attribute :queue_name
       class_attribute :processor
+      class_attribute :environment
 
       #------------------------------------------------------------------------
       # class methods
@@ -27,25 +28,27 @@ module Boxxspring
         end
 
         def queue_url
-          unless @queue_url.present?
+          @queue_url ||= begin
             response = self.queue_interface.create_queue( 
-              queue_name: self.full_queue_name 
+              queue_name: self.full_queue_name
             )
-            @queue_url = response[ :queue_url ]       
+            response[ :queue_url ]
           end
-          @queue_url
+        end
+
+        def environment
+          @environment ||= begin
+            Worker.env == 'development' ?
+              ( ENV[ 'USER' ].underscore || 'development' ) :
+              Worker.env
+          end
         end
 
         protected; def full_queue_name
-          name = ( Worker.env == 'development' ) ?
-            ( ENV[ 'USER' ] || 'development' ) :
-            Worker.env 
-          name += '-' + 
-                  ( self.queue_name || 
-                    self.name.
-                      underscore.
-                      gsub( /[\/]/, '-' ).
-                      gsub( /_worker\Z/, '' ) )
+          queue_name = self.queue_name ||
+                       self.name.underscore.gsub( /[\/]/, '-' ).
+                         gsub( /_worker\Z/, '' )
+          self.environment + '-' + queue_name
         end
 
       end
@@ -58,6 +61,7 @@ module Boxxspring
         messages.each do | message |
           if message.present?
             payload = self.payload_from_message( message )
+
             if payload.present?
               begin
                 result = self.process_payload( payload )
@@ -65,24 +69,47 @@ module Boxxspring
                 self.delete_message( message ) unless result == false
               rescue StandardError => error
                 self.logger.error(
-                  "The #{ self.human_name } worker failed to process the payload."
+                  "The #{ self.human_name } failed to process the payload."
                 )
                 self.logger.error( error.message )
-                self.logger.error( error.backtrace.join( "\n" ) )
+                self.logger.info( error.backtrace.join( "\n" ) )
               end
             else
-              # note: messages with invalid payloads are deleted
               self.delete_message( message )
               self.logger.error(
-                "The #{ self.human_name } worker received an invalid payload."
+                "The #{ self.human_name } received an invalid payload."
               )
             end
           end
         end
       end
 
-      protected; def logger
-        @logger ||= Boxxspring::Worker.configuration.logger
+      def logger
+        @logger ||= begin
+          worker_name = human_name.gsub( ' ','_' )
+          worker_env = self.class.environment
+          port = ( worker_env == 'production' ) ? 54323 : 48686
+          host_suffix = ( worker_env == 'production' ) ? '' : ".#{ worker_env }"
+
+          Boxxspring::Worker.configuration do
+            logger(
+              RemoteSyslogLogger.new(
+                'logs2.papertrailapp.com',
+                port,
+                program: worker_name,
+                local_hostname: "#{ ENV['LOG_SYSTEM'] }#{ host_suffix }"
+              )
+            )
+
+            level = ENV['LOG_LEVEL'].present? ? ENV['LOG_LEVEL'].upcase : 'INFO'
+            logger.level = "Logger::#{ level }".constantize
+          end
+          Boxxspring::Worker.configuration.logger
+        end
+      end
+
+      def debug_mode?
+        ENV['LOG_LEVEL'].present? && ENV['LOG_LEVEL'] == 'debug'
       end
 
       #------------------------------------------------------------------------
@@ -99,8 +126,8 @@ module Boxxspring
           messages = response[ :messages ]
         rescue StandardError => error
           raise RuntimeError.new( 
-            "The #{ self.human_name } worker is unable to receive a message " +
-            "from the queue. #{error.message}."
+            "The #{ self.human_name } is unable to receive a message " +
+            "from the queue. #{ error.message }."
           )
         end
         messages
@@ -114,25 +141,29 @@ module Boxxspring
           )
         rescue StandardError => error
           raise RuntimeError.new( 
-            "The #{ self.human_name } worker is unable to delete the " + 
-            "message from the queue. #{error.message}."
+            "The #{ self.human_name } is unable to delete the " +
+            "message from the queue. #{ error.message }."
           )
         end
+
         message
       end
 
       protected; def payload_from_message( message )
         payload = message.body
-        if ( payload.present? )
+
+        if payload.present?
           payload = JSON.parse( payload ) rescue payload 
-          if ( payload.is_a?( Hash ) && 
-               payload.include?( 'Type' ) && 
-               payload[ 'Type' ] == 'Notification' )
+          if payload.is_a?( Hash ) && payload.include?( 'Type' ) &&
+             payload[ 'Type' ] == 'Notification'
             payload = payload[ 'Message' ]
             payload = payload.present? ? 
               ( JSON.parse( payload ) rescue payload ) : 
               payload
-          end 
+          end
+        else
+          logger.info( "Payload is empty. Message #{ message.inspect }" ) \
+            if debug_mode?
         end
         payload
       end
@@ -148,14 +179,14 @@ module Boxxspring
       end
 
       protected; def delegate_payload( queue_name, payload )
-        queue_name_prefix = ( Worker.env == 'development' ) ?
-          ( ENV[ 'USER' ] || 'development' ) : Worker.env 
-       queue_name = queue_name_prefix + '-' + queue_name
+        queue_name = self.class.environment + '-' + queue_name
+
         begin
           response = self.class.queue_interface.create_queue( 
             queue_name: queue_name 
           )
-          queue_url = response[ :queue_url ]       
+          queue_url = response[ :queue_url ]
+
           if queue_url.present?
             self.class.queue_interface.send_message(
               queue_url: queue_url,
@@ -164,13 +195,13 @@ module Boxxspring
           end
         rescue StandardError => error
           raise RuntimeError.new( 
-            "The #{ self.human_name } worker was unable to delegate the " + 
-            "payload to the queue name '#{ queue_name }'. #{error.message}."
+            "The #{ self.human_name } was unable to delegate the " +
+            "payload to the queue '#{ queue_name }'. #{ error.message }."
           )
         end
       end
 
-      protected; def operation(endpoint)
+      protected; def operation( endpoint )
         Boxxspring::Operation.new(
           endpoint,
           Boxxspring::Worker.configuration.api_credentials.to_hash
@@ -178,10 +209,7 @@ module Boxxspring
       end
 
       protected; def human_name
-        self.class.name.  
-          underscore.
-          gsub( /[\/]/, ' ' ).
-          gsub( /_worker\Z/, '' )
+        self.class.name.underscore.gsub( /[\/]/, ' ' )
       end
 
     end

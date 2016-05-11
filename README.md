@@ -17,14 +17,14 @@ payload = self.payload_from_message( message )
 self.process_payload( payload )
 ```
 
-- If there's an error with the payload, the worker will log the error along with the backtrace.
+- If there's an error with the payload, the worker will log the error:
 ```ruby
 rescue StandardError => error
   self.logger.error(
     "The #{ self.human_name } worker failed to process the payload."
   )
   self.logger.error( error.message )
-  self.logger.error( error.backtrace.join( "\n" ) )
+  self.logger.info( error.backtrace.join( "\n" ) )
 ```
 
 - Messages are deleted if the payload is invalid or not meant for it `self.delete_message( message )`
@@ -50,3 +50,6 @@ Boxxspring::Operation.new(
   Worker.configuration.api_credentials.to_hash
 )
 ```
+
+### Environment variables
+- `LOG_LEVEL`: When set to `debug`, the worker will log messages that are restricted to debug mode.
