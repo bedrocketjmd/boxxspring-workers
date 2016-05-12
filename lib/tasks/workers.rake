@@ -1,3 +1,5 @@
+require 'boxxspring-worker'
+
 namespace :worker do
 
   descendants = Boxxspring::Worker::Base.descendants
