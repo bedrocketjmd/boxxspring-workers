@@ -1,38 +1,34 @@
+require 'boxxspring-worker'
+
 namespace :worker do
 
   descendants = Boxxspring::Worker::Base.descendants
-
-  # remove base class workers
   descendants.delete( Boxxspring::Worker::TaskBase )
 
   descendants.each do | worker_class |
+    worker_name = worker_class.name.underscore.gsub(/_worker\Z/, '')
+    human_name  = worker_class.name.underscore.gsub('_', ' ')
+    logger      = Boxxspring::Worker.configuration.logger
 
-    worker_name = worker_class.
-                    name.
-                    underscore.
-                    gsub( /[\/]/, '-' ). 
-                    gsub( /_worker\Z/, '' )
-
-    desc "#{worker_name.humanize.downcase} worker."
+    desc "#{human_name}"
     task worker_name.to_sym do
-      spinner = %w{| / - \\}
       worker = worker_class.new
+
+      spinner = %w{| / - \\}
       print 'working...  ' 
-      Boxxspring::Worker.configuration.logger.info(
-        "The #{worker_name.humanize.downcase} worker has started." 
-      )
+      logger.info( "The #{human_name} has started." )
+
       begin
         loop do 
           print "\b" + spinner.rotate!.first
           worker.process
         end
       rescue SystemExit, Interrupt
-        Boxxspring::Worker.configuration.logger.info(
-          "The #{worker_name.humanize.downcase} worker has stopped." 
-        )
+        logger.info( "The #{human_name} has stopped." )
         puts 'stopped'
         exit 130
       end 
     end
   end
+
 end

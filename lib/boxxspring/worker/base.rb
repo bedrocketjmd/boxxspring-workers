@@ -196,7 +196,7 @@ module Boxxspring
         rescue StandardError => error
           raise RuntimeError.new( 
             "The #{ self.human_name } was unable to delegate the " +
-            "payload to the queue '#{ queue_name }'. #{ error.message }."
+            "payload to the '#{ queue_name }' queue. #{ error.message }."
           )
         end
       end
@@ -209,7 +209,7 @@ module Boxxspring
       end
 
       protected; def human_name
-        self.class.name.underscore.gsub( /[\/]/, ' ' )
+        self.class.name.underscore.gsub('_', ' ')
       end
 
     end
