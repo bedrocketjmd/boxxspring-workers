@@ -8,15 +8,15 @@ namespace :worker do
   descendants.each do | worker_class |
     worker_name = worker_class.name.underscore.gsub(/_worker\Z/, '')
     human_name  = worker_class.name.underscore.gsub('_', ' ')
-    logger      = Boxxspring::Worker.configuration.logger
 
-    desc "#{human_name}"
+    desc "#{ human_name }"
     task worker_name.to_sym do
       worker = worker_class.new
+      logger = worker.logger
 
       spinner = %w{| / - \\}
       print 'working...  ' 
-      logger.info( "The #{human_name} has started." )
+      logger.info( "The #{ human_name } has started." )
 
       begin
         loop do 
@@ -24,7 +24,7 @@ namespace :worker do
           worker.process
         end
       rescue SystemExit, Interrupt
-        logger.info( "The #{human_name} has stopped." )
+        logger.info( "The #{ human_name } has stopped." )
         puts 'stopped'
         exit 130
       end 
