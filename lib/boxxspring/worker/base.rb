@@ -1,3 +1,5 @@
+require 'remote_syslog_logger'
+
 module Boxxspring 
 
   module Worker
@@ -202,6 +204,27 @@ module Boxxspring
             "payload to the '#{ queue_name }' queue. #{ error.message }."
           )
         end
+      end
+
+      # Meta API read & error handling
+      protected; def read_object( property_id=nil, type, id, includes )
+        if property_id.present?
+          endpoint = "/properties/#{ property_id }/#{ type.pluralize }/#{ id }"
+        else
+          endpoint = "/properties/#{ id }"
+        end
+
+        object = operation( endpoint ).include( *includes ).read
+        if error?( object, type.capitalize ) && object.is_a?( Array )
+          object.first
+        else
+          object
+        end
+      end
+
+      protected; def error?( object, object_class )
+        class_name = "Boxxspring::#{ object_class }".constantize
+        !object.is_a?( class_name ) || object.send( :errors ).present?
       end
 
       protected; def operation( endpoint )
