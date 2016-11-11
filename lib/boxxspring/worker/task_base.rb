@@ -68,8 +68,8 @@ module Boxxspring
                 self.logger.error( task.first.message )
               else
                 self.logger.error(
-                  "The #{ self.human_name } is unable to retrieve the " +
-                  "task with the id #{ task_id }."
+                  "The #{self.human_name} is unable to retrieve the " +
+                  "task with the id #{task_id}. #{task.inspect}"
                 )
               end
             end
