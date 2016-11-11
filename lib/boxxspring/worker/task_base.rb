@@ -76,7 +76,7 @@ module Boxxspring
               else
                 self.logger.error(
                   "The #{self.human_name} worker is unable to retrieve the " +
-                  "task with the id #{task_id}."
+                  "task with the id #{task_id}. #{task.inspect}"
                 )
               end
             end
