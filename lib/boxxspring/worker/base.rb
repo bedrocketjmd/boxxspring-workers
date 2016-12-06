@@ -1,3 +1,5 @@
+require 'remote_syslog_logger'
+
 module Boxxspring 
 
   module Worker
@@ -87,26 +89,29 @@ module Boxxspring
       def logger
         @logger ||= begin
           remote_logger = ENV[ 'REMOTE_LOGGER' ] || ''
-          remote_host   = remote_logger.split( ':' )[0]
-          remote_port   = remote_logger.split( ':' )[1].to_i
 
-          worker_name = human_name.gsub( ' ','_' )
-          worker_env = self.class.environment
-          host_suffix = ( worker_env == 'production' ) ? '' : ".#{ worker_env }"
+          if remote_logger.present?
+            remote_host   = remote_logger.split( ':' )[0]
+            remote_port   = remote_logger.split( ':' )[1].to_i
 
-          Boxxspring::Worker.configuration do
-            logger(
-              RemoteSyslogLogger.new(
-                remote_host,
-                remote_port,
-                program: worker_name,
-                local_hostname: "#{ ENV['LOG_SYSTEM'] }#{ host_suffix }"
-              )
+            worker_name = human_name.gsub( ' ','_' )
+            worker_env = self.class.environment
+            host_suffix = ( worker_env == 'production' ) ? '' : ".#{ worker_env }"
+
+            logger = RemoteSyslogLogger.new(
+              remote_host,
+              remote_port,
+              program: worker_name,
+              local_hostname: "#{ ENV['LOG_SYSTEM'] }#{ host_suffix }"
             )
-
-            level = ENV['LOG_LEVEL'].present? ? ENV['LOG_LEVEL'].upcase : 'INFO'
-            logger.level = "Logger::#{ level }".constantize
+          else
+            logger = Logger.new( STDOUT )
           end
+
+          level = ENV['LOG_LEVEL'].present? ? ENV['LOG_LEVEL'].upcase : 'INFO'
+          logger.level = "Logger::#{ level }".constantize
+
+          Boxxspring::Worker.configuration { logger( logger ) }
           Boxxspring::Worker.configuration.logger
         end
       end
@@ -202,6 +207,27 @@ module Boxxspring
             "payload to the '#{ queue_name }' queue. #{ error.message }."
           )
         end
+      end
+
+      # Meta API read & error handling
+      protected; def read_object( property_id=nil, type, id, includes )
+        if property_id.present?
+          endpoint = "/properties/#{ property_id }/#{ type.pluralize }/#{ id }"
+        else
+          endpoint = "/properties/#{ id }"
+        end
+
+        object = operation( endpoint ).include( *includes ).read
+        if error?( object, type.capitalize ) && object.is_a?( Array )
+          object.first
+        else
+          object
+        end
+      end
+
+      protected; def error?( object, object_class )
+        class_name = "Boxxspring::#{ object_class }".constantize
+        !object.is_a?( class_name ) || object.send( :errors ).present?
       end
 
       protected; def operation( endpoint )
