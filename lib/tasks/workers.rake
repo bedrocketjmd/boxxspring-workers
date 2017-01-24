@@ -10,7 +10,7 @@ namespace :worker do
     human_name  = worker_class.name.underscore.gsub('_', ' ')
 
     desc "#{ human_name }"
-    task worker_name.to_sym => :environment do
+    task worker_name.to_sym do
       worker = worker_class.new
       logger = worker.logger
 
