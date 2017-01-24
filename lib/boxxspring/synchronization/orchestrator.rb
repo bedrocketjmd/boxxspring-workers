@@ -30,7 +30,9 @@ module Boxxspring
       def read( key, options = {} )
         range = options[ :range ]
         if range
-          @provider.lrange( key, range[ :begin ], range[ :end ] )
+          range_start = range[ :start ] || 0
+          range_end   = range[ :end ] || -1
+          @provider.lrange( key, range_start, range_end )
         else
           @provider.get( key )
         end
