@@ -27,8 +27,15 @@ module Boxxspring
           true : false
       end
 
-      def read( key )
-        @provider.get( key )
+      def read( key, options = {} )
+        range = options[ :range ]
+        if range
+          range_start = range[ :start ] || 0
+          range_end   = range[ :end ] || -1
+          @provider.lrange( key, range_start, range_end )
+        else
+          @provider.get( key )
+        end
       end
 
       def write( key, value, options = {} )

@@ -8,8 +8,8 @@ module Boxxspring
         @name = name
       end
 
-      def read
-        @orchestrator.read( @name )
+      def read( options={} )
+        @orchestrator.read( @name, options )
       end
 
       def write( value, options={} )
