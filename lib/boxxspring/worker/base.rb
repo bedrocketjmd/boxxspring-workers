@@ -101,7 +101,7 @@ module Boxxspring
             logger = RemoteSyslogLogger.new(
               remote_host,
               remote_port,
-              program: worker_name,
+              program: worker_name[0..30],
               local_hostname: "#{ ENV['LOG_SYSTEM'] }#{ host_suffix }"
             )
           else
