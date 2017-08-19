@@ -1,6 +1,6 @@
 require 'remote_syslog_logger'
 
-module Boxxspring 
+module Boxxspring
 
   module Worker
 
@@ -19,7 +19,7 @@ module Boxxspring
       #------------------------------------------------------------------------
       # class methods
 
-      class << self 
+      class << self
 
         public; def process( &block )
           self.processor = block
@@ -31,7 +31,7 @@ module Boxxspring
 
         def queue_url
           @queue_url ||= begin
-            response = self.queue_interface.create_queue( 
+            response = self.queue_interface.create_queue(
               queue_name: self.full_queue_name
             )
             response[ :queue_url ]
@@ -58,8 +58,8 @@ module Boxxspring
       #------------------------------------------------------------------------
       # operations
 
-      def process 
-        messages = self.receive_messages() || [] 
+      def process
+        messages = self.receive_messages() || []
         messages.each do | message |
           if message.present?
             payload = self.payload_from_message( message )
@@ -91,19 +91,40 @@ module Boxxspring
           remote_logger = ENV[ 'REMOTE_LOGGER' ] || ''
 
           if remote_logger.present?
-            remote_host   = remote_logger.split( ':' )[0]
-            remote_port   = remote_logger.split( ':' )[1].to_i
+            if remote_logger == 'cloudwatch'
 
-            worker_name = human_name.gsub( ' ','_' )
-            worker_env = self.class.environment
-            host_suffix = ( worker_env == 'production' ) ? '' : ".#{ worker_env }"
+              workers_env = ENV[ 'WORKERS_ENV' ]
+              if workers_env == "development"
+                username = ENV[ 'USER' ] || ENV[ 'USERNAME' ]
+                username = username.underscore.dasherize
+                cloud_group = "#{ workers_env }.#{ username }"
+              else
+                cloud_group = "#{ ENV[ 'LOG_SYSTEM' ] }.#{ ENV[ 'WORKERS_ENV' ] }"
+              end
+              cloud_stream = human_name
 
-            logger = RemoteSyslogLogger.new(
-              remote_host,
-              remote_port,
-              program: worker_name[0..30],
-              local_hostname: "#{ ENV['LOG_SYSTEM'] }#{ host_suffix }"
-            )
+              logger = CloudWatchLogger.new( {
+                access_key_id: ENV[ 'AWS_ACCESS_KEY_ID' ],
+                secret_access_key: ENV[ 'AWS_SECRET_ACCESS_KEY' ] },
+                cloud_group,
+                cloud_stream
+              )
+
+            else
+              remote_host   = remote_logger.split( ':' )[0]
+              remote_port   = remote_logger.split( ':' )[1].to_i
+
+              worker_name = human_name.gsub( ' ','_' )
+              worker_env = self.class.environment
+              host_suffix = ( worker_env == 'production' ) ? '' : ".#{ worker_env }"
+
+              logger = RemoteSyslogLogger.new(
+                remote_host,
+                remote_port,
+                program: worker_name[0..30],
+                local_hostname: "#{ ENV['LOG_SYSTEM'] }#{ host_suffix }"
+              )
+            end
           else
             logger = Logger.new( STDOUT )
           end
@@ -126,14 +147,14 @@ module Boxxspring
       protected; def receive_messages
         messages = nil
         begin
-          response = self.class.queue_interface.receive_message( 
+          response = self.class.queue_interface.receive_message(
             queue_url: self.class.queue_url,
             max_number_of_messages: QUEUE_MESSAGE_REQUEST_COUNT,
-            wait_time_seconds: QUEUE_MESSAGE_WAIT_IN_SECONDS 
+            wait_time_seconds: QUEUE_MESSAGE_WAIT_IN_SECONDS
           )
           messages = response[ :messages ]
         rescue StandardError => error
-          raise RuntimeError.new( 
+          raise RuntimeError.new(
             "The #{ self.human_name } is unable to receive a message " +
             "from the queue. #{ error.message }."
           )
@@ -143,12 +164,12 @@ module Boxxspring
 
       protected; def delete_message( message )
         begin
-          self.class.queue_interface.delete_message( 
+          self.class.queue_interface.delete_message(
             queue_url: self.class.queue_url,
             receipt_handle: message[ :receipt_handle ]
           )
         rescue StandardError => error
-          raise RuntimeError.new( 
+          raise RuntimeError.new(
             "The #{ self.human_name } is unable to delete the " +
             "message from the queue. #{ error.message }."
           )
@@ -161,12 +182,12 @@ module Boxxspring
         payload = message.body
 
         if payload.present?
-          payload = JSON.parse( payload ) rescue payload 
+          payload = JSON.parse( payload ) rescue payload
           if payload.is_a?( Hash ) && payload.include?( 'Type' ) &&
              payload[ 'Type' ] == 'Notification'
             payload = payload[ 'Message' ]
-            payload = payload.present? ? 
-              ( JSON.parse( payload ) rescue payload ) : 
+            payload = payload.present? ?
+              ( JSON.parse( payload ) rescue payload ) :
               payload
           end
         else
@@ -177,10 +198,10 @@ module Boxxspring
       end
 
       protected; def process_payload( payload )
-        if self.class.processor.present? 
+        if self.class.processor.present?
           self.class.processor.call( payload )
         else
-          raise RuntimeError.new( 
+          raise RuntimeError.new(
             "The worker lacks a processor"
           )
         end
@@ -190,8 +211,8 @@ module Boxxspring
         queue_name = self.class.environment + '-' + queue_name
 
         begin
-          response = self.class.queue_interface.create_queue( 
-            queue_name: queue_name 
+          response = self.class.queue_interface.create_queue(
+            queue_name: queue_name
           )
           queue_url = response[ :queue_url ]
 
@@ -202,7 +223,7 @@ module Boxxspring
             )
           end
         rescue StandardError => error
-          raise RuntimeError.new( 
+          raise RuntimeError.new(
             "The #{ self.human_name } was unable to delegate the " +
             "payload to the '#{ queue_name }' queue. #{ error.message }."
           )
