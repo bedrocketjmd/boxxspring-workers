@@ -93,13 +93,14 @@ module Boxxspring
           if remote_logger.present?
             if remote_logger == 'cloudwatch'
 
+              worker_name = human_name.gsub( ' ','_' )
               workers_env = ENV[ 'WORKERS_ENV' ]
               if workers_env == "development"
                 username = ENV[ 'USER' ] || ENV[ 'USERNAME' ]
                 username = username.underscore.dasherize
                 cloud_group = "#{ workers_env }.#{ username }"
               else
-                cloud_group = "#{ ENV[ 'LOG_SYSTEM' ] }.#{ ENV[ 'WORKERS_ENV' ] }"
+                cloud_group = "#{ worker_name }.#{ ENV[ 'WORKERS_ENV' ] }"
               end
               cloud_stream = human_name
 
@@ -114,7 +115,6 @@ module Boxxspring
               remote_host   = remote_logger.split( ':' )[0]
               remote_port   = remote_logger.split( ':' )[1].to_i
 
-              worker_name = human_name.gsub( ' ','_' )
               worker_env = self.class.environment
               host_suffix = ( worker_env == 'production' ) ? '' : ".#{ worker_env }"
 
