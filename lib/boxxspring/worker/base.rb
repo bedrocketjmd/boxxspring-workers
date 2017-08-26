@@ -100,9 +100,9 @@ module Boxxspring
                 username = username.underscore.dasherize
                 cloud_group = "#{ workers_env }.#{ username }"
               else
-                cloud_group = "#{ worker_name }.#{ ENV[ 'WORKERS_ENV' ] }"
+                cloud_group = "#{ ENV[ 'LOG_SYSTEM' ] }.#{ ENV[ 'WORKERS_ENV' ] }"
               end
-              cloud_stream = human_name
+              cloud_stream = worker_name
 
               logger = CloudWatchLogger.new( {
                 access_key_id: ENV[ 'AWS_ACCESS_KEY_ID' ],
