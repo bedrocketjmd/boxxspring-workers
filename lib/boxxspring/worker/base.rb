@@ -91,9 +91,9 @@ module Boxxspring
           remote_logger = ENV[ 'REMOTE_LOGGER' ] || ''
 
           if remote_logger.present?
+            worker_name = self.human_name.gsub( ' ','_' )
             if remote_logger == 'cloudwatch'
 
-              worker_name = human_name.gsub( ' ','_' )
               workers_env = ENV[ 'WORKERS_ENV' ]
               if workers_env == "development"
                 username = ENV[ 'USER' ] || ENV[ 'USERNAME' ]
