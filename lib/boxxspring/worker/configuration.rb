@@ -45,19 +45,18 @@ module Boxxspring
           puts "ERROR: #{ token_details }"
         end
 
-        unless token_details.is_a?( Hash )
-          return token_details
-        else
+        if token_details.is_a?( Hash )
           token_details.symbolize_keys!
           token_details.update( expires_in: Time.now + token_details[ :expires_in ] ) if token_details[ :expires_in ]
           api_credentials.access_token =  token_details[ :access_token ]
           api_credentials.token_expiry =  token_details[ :expires_in ]
-          return api_credentials
+          result = api_credentials
+        else
+          result = token_details
         end
+        result
       end
-
     end
-
   end
 
 end
