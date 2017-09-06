@@ -6,43 +6,48 @@ module Boxxspring
 
       def logger
 
-        @logger || begin
+        @logger ||= begin
 
-          logger = Workers.configuration.logger 
-          return if logger.present?
+          if Worker.configuration.include?( 'logger' ) 
 
-          if self.log_local?
+           logger = Worker.configuration.logger 
 
-            logger = Logger.new( STDOUT )
+          else 
 
-          else
+            if self.log_local?
 
-            workers_env = ENV[ 'WORKERS_ENV' ]
-            group_name = self.group_name 
-            raise 'A logging group is required' unless group_name.present?
+              logger = Logger.new( STDOUT )
 
-            worker_name = self.human_name.gsub( ' ','_' )
+            else
 
-            if workers_env == "development"
-              username = ENV[ 'USER' ] || ENV[ 'USERNAME' ]
-              username = username.underscore.dasherize
+              workers_env = ENV[ 'WORKERS_ENV' ]
+              group_name = self.log_group_name 
+              raise 'A logging group is required' unless group_name.present?
 
-              group_name = "#{ username }.#{ group_name }"
+              worker_name = self.human_name.gsub( ' ','_' )
+
+              if workers_env == "development"
+                username = ENV[ 'USER' ] || ENV[ 'USERNAME' ]
+                username = username.underscore.dasherize
+
+                group_name = "#{ username }.#{ group_name }"
+              end
+
+              logger = CloudWatchLogger.new( 
+                {
+                  access_key_id: ENV[ 'AWS_ACCESS_KEY_ID' ],
+                  secret_access_key: ENV[ 'AWS_SECRET_ACCESS_KEY' ] 
+                },
+                group_name,
+                worker_name 
+              )
+
             end
 
-            logger = CloudWatchLogger.new( 
-              {
-                access_key_id: ENV[ 'AWS_ACCESS_KEY_ID' ],
-                secret_access_key: ENV[ 'AWS_SECRET_ACCESS_KEY' ] 
-              },
-              group_name,
-              worker_name 
-            )
 
           end
 
           logger.level = self.log_level 
-
           logger
             
         end

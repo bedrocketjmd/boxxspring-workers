@@ -16,7 +16,6 @@ module Boxxspring
     class Configuration < Abstract
 
       include Singleton
-      include Logging 
 
       def initialize
         super( { 
