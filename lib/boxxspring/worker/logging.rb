@@ -23,7 +23,8 @@ module Boxxspring
             else
 
               group_name = self.log_group_name 
-              raise 'A logging group is required' unless group_name.present?
+              raise 'A logging group is required. You may need to set LOG_GROUP.' \
+                unless group_name.present?
 
               worker_name = self.human_name.gsub( ' ','_' )
 
@@ -59,6 +60,9 @@ module Boxxspring
 
       protected; def log_group_name
         group_name = ENV[ 'LOG_GROUP' ]
+        group_name ||= begin
+          File.open( Worker.root.join( 'GROUP' ), &:readline ) rescue nil       
+        end
         group_name ||= begin 
           name = `git config --get remote.origin.url` rescue nil
           name.present? ? File.basename( name, '.*' ) : nil

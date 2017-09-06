@@ -1,5 +1,3 @@
-require 'remote_syslog_logger'
-
 module Boxxspring
 
   module Worker
