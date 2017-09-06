@@ -4,6 +4,8 @@ module Boxxspring
 
     module Logging
 
+      PWD = Dir.pwd.freeze
+
       def logger
 
         @logger ||= begin
@@ -61,7 +63,7 @@ module Boxxspring
       protected; def log_group_name
         group_name = ENV[ 'LOG_GROUP' ]
         group_name ||= begin
-          File.open( Worker.root.join( 'GROUP' ), &:readline ) rescue nil       
+          File.open( File.join( PWD, 'GROUP' ), &:readline ) rescue nil       
         end
         group_name ||= begin 
           name = `git config --get remote.origin.url` rescue nil

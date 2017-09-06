@@ -13,7 +13,7 @@ module Boxxspring
 
     def self.root
       @root ||= begin 
-        specification = Gem::Specification.find_by_name( 'boxxspring-worker') 
+        specification = Gem::Specification.find_by_name( 'boxxspring-workers' ) 
         Pathname.new( specification.gem_dir )
       end
     end
