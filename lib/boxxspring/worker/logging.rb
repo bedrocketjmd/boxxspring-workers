@@ -26,11 +26,13 @@ module Boxxspring
 
               worker_name = self.human_name.gsub( ' ','_' )
 
-              if workers_env == "development"
+              if workers_env == 'development'
                 username = ENV[ 'USER' ] || ENV[ 'USERNAME' ]
                 username = username.underscore.dasherize
 
                 group_name = "#{ username }.#{ group_name }"
+              elsif workers_env != 'production'
+                group_name = "#{ workers_env }.#{ group_name }"
               end
 
               logger = CloudWatchLogger.new( 
