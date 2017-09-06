@@ -10,6 +10,11 @@ module Boxxspring
     class Base
 
       #------------------------------------------------------------------------
+      # modules
+
+      include Logging
+
+      #------------------------------------------------------------------------
       # class attributes
 
       class_attribute :queue_name
@@ -84,13 +89,6 @@ module Boxxspring
             end
           end
         end
-      end
-
-      #------------------------------------------------------------------------
-      # operations, support
-
-      def logger 
-        Boxxspring::Worker.configuration.logger
       end
 
       #------------------------------------------------------------------------

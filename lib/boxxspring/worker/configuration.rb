@@ -21,7 +21,7 @@ module Boxxspring
       def initialize
         super( { 
           env: ENV[ 'WORKERS_ENV' ] || 'development',
-          logger: default_logger
+          logger: nil 
         } )  
       end
 

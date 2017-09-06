@@ -4,9 +4,12 @@ module Boxxspring
 
     module Logging
 
-      def default_logger
+      def logger
 
-        @default_logger || begin
+        @logger || begin
+
+          logger = Workers.configuration.logger 
+          return if logger.present?
 
           if self.log_local?
 
@@ -46,7 +49,7 @@ module Boxxspring
 
       end
 
-      def log_group_name
+      protected; def log_group_name
         group_name = ENV[ 'LOG_GROUP' ]
         group_name ||= begin 
           name = `git config --get remote.origin.url` rescue nil
@@ -55,7 +58,7 @@ module Boxxspring
         group_name
       end
 
-      def log_level 
+      protected; def log_level 
         level = Logger::WARN
         if ENV[ 'LOG_LEVEL' ].present? 
           level = ENV[ 'LOG_LEVEL' ].upcase
@@ -66,7 +69,7 @@ module Boxxspring
         level 
       end
 
-      def log_local?
+      protected; def log_local?
         log_local = ENV[ 'LOG_LOCAL' ] || 'false'
         ( log_local.to_s =~ /^true$/i ) == 0
       end      
