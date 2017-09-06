@@ -8,19 +8,20 @@ module Boxxspring
 
         @logger ||= begin
 
+          workers_env = ENV[ 'WORKERS_ENV' ]
+
           if Worker.configuration.include?( 'logger' ) 
 
            logger = Worker.configuration.logger 
 
           else 
 
-            if self.log_local?
+            if self.log_local? || workers_env == 'test'
 
               logger = Logger.new( STDOUT )
 
             else
 
-              workers_env = ENV[ 'WORKERS_ENV' ]
               group_name = self.log_group_name 
               raise 'A logging group is required' unless group_name.present?
 
