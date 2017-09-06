@@ -16,11 +16,12 @@ module Boxxspring
     class Configuration < Abstract
 
       include Singleton
+      include Logging 
 
       def initialize
         super( { 
           env: ENV[ 'WORKERS_ENV' ] || 'development',
-          logger: Logger.new( STDOUT )
+          logger: default_logger
         } )  
       end
 

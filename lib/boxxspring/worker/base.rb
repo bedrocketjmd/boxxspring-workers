@@ -86,59 +86,11 @@ module Boxxspring
         end
       end
 
-      def logger
-        @logger ||= begin
-          remote_logger = ENV[ 'REMOTE_LOGGER' ] || ''
+      #------------------------------------------------------------------------
+      # operations, support
 
-          if remote_logger.present?
-            worker_name = self.human_name.gsub( ' ','_' )
-            if remote_logger == 'cloudwatch'
-
-              workers_env = ENV[ 'WORKERS_ENV' ]
-              if workers_env == "development"
-                username = ENV[ 'USER' ] || ENV[ 'USERNAME' ]
-                username = username.underscore.dasherize
-                cloud_group = "#{ workers_env }.#{ username }"
-              else
-                cloud_group = "#{ ENV[ 'LOG_SYSTEM' ] }.#{ ENV[ 'WORKERS_ENV' ] }"
-              end
-              cloud_stream = worker_name
-
-              logger = CloudWatchLogger.new( {
-                access_key_id: ENV[ 'AWS_ACCESS_KEY_ID' ],
-                secret_access_key: ENV[ 'AWS_SECRET_ACCESS_KEY' ] },
-                cloud_group,
-                cloud_stream
-              )
-
-            else
-              remote_host   = remote_logger.split( ':' )[0]
-              remote_port   = remote_logger.split( ':' )[1].to_i
-
-              worker_env = self.class.environment
-              host_suffix = ( worker_env == 'production' ) ? '' : ".#{ worker_env }"
-
-              logger = RemoteSyslogLogger.new(
-                remote_host,
-                remote_port,
-                program: worker_name[0..30],
-                local_hostname: "#{ ENV['LOG_SYSTEM'] }#{ host_suffix }"
-              )
-            end
-          else
-            logger = Logger.new( STDOUT )
-          end
-
-          level = ENV['LOG_LEVEL'].present? ? ENV['LOG_LEVEL'].upcase : 'INFO'
-          logger.level = "Logger::#{ level }".constantize
-
-          Boxxspring::Worker.configuration { logger( logger ) }
-          Boxxspring::Worker.configuration.logger
-        end
-      end
-
-      def debug_mode?
-        ENV['LOG_LEVEL'].present? && ENV['LOG_LEVEL'] == 'debug'
+      def logger 
+        Boxxspring::Worker.configuration.logger
       end
 
       #------------------------------------------------------------------------
@@ -179,6 +131,7 @@ module Boxxspring
       end
 
       protected; def payload_from_message( message )
+        
         payload = message.body
 
         if payload.present?
@@ -191,10 +144,9 @@ module Boxxspring
               payload
           end
         else
-          logger.info( "Payload is empty. Message #{ message.inspect }" ) \
-            if debug_mode?
+          logger.error( "The message lacks a payload." ) 
+          logger.debug( message.inspect )
         end
-        payload
       end
 
       protected; def process_payload( payload )
