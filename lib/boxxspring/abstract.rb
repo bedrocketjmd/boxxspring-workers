@@ -13,6 +13,10 @@ module Boxxspring
       return @attributes
     end
 
+    def include?( name )
+      @attributes.include?( name )
+    end
+
     def method_missing( method, *arguments, &block )
       result = nil
       if arguments.length == 0 
