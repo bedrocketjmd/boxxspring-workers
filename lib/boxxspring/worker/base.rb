@@ -143,6 +143,7 @@ module Boxxspring
           logger.error( "The message lacks a payload." ) 
           logger.debug( message.inspect )
         end
+        payload
       end
 
       protected; def process_payload( payload )
