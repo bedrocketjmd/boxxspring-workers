@@ -1,30 +1,23 @@
 module Boxxspring
-
   module Worker
-
     module Logging
 
       PWD = Dir.pwd.freeze
 
       def logger
-
         @logger ||= begin
-
           workers_env = ENV[ 'WORKERS_ENV' ]
 
           if Worker.configuration.include?( 'logger' )
-
            logger = Worker.configuration.logger
-
           else
 
             if self.log_local? || workers_env == 'test'
-
               logger = Logger.new( STDOUT )
-
             else
 
               group_name = self.log_group_name
+
               raise 'A logging group is required. You may need to set LOG_GROUP.' \
                 unless group_name.present?
 
@@ -49,15 +42,13 @@ module Boxxspring
               )
 
             end
-
-
           end
-
           logger.level = self.log_level
+          logger.add_metric_data = self.add_metric_data
+
           logger
 
         end
-
       end
 
       protected; def log_group_name
@@ -88,8 +79,41 @@ module Boxxspring
         ( log_local.to_s =~ /^true$/i ) == 0
       end
 
+      protected; def add_metric_data( type )
+        client = Aws::CloudWatch::Client.new
+        
+        client.put_metric_data( {
+          namespace: 'Unimatrix/Worker',
+          metric_data: [ metric_data( type, realm ) ]
+        } )
+      end
+
+      protected; def metric_data( type )
+        # Messages Invocations Failures Errors
+        
+        data = { metric_name: type,
+                 dimensions: [
+                   {
+                     name: 'WorkerName',
+                     value: self.human_name.gsub( ' ','_' )
+                   },
+                   {
+                     name: 'Environment',
+                     value: ENV[ 'WORKERS_ENV' ]
+                   }
+                ],
+                value: 1,
+                unit: 'Count'
+               }
+
+        if ENV[ 'WORKERS_ENV' ] == 'development'
+          username = ENV[ 'USER' ] || ENV[ 'USERNAME' ]
+          username = username.titleize.split( " " ).join( "" )
+          data[ :dimensions ] << { name: 'DeveloperName', value: username }
+        end
+        data
+      end
+
     end
-
   end
-
 end
