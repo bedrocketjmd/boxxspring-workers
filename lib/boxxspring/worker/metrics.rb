@@ -1,12 +1,30 @@
+require 'thread'
+
 module Boxxspring
   module Worker
     module Metrics
 
-      #Example call
-      metric "Invocations", :value => 1 do 
-        # stuff happens here 
-        
-      end
+      # Messages Invocations Failures Errors
+      METRICS = Queue.new
+      THREAD_POOL_SIZE = 4
+
+
+
+
+
+        #Example call
+        metric "Invocations", :value => 1 do 
+          metrics = []
+          
+          #..
+          
+          metrics << { name: "ArtifactId", value: @task.artifact_id }
+
+          #..
+
+          metrics
+        end
+
 
 
 
@@ -16,10 +34,6 @@ module Boxxspring
       end
 
       def metric ( name, value: )
-        # Messages Invocations Failures Errors
-        
-        data = yield
-        
         obj = { 
           metric_name: name
           dimensions: [
@@ -36,11 +50,26 @@ module Boxxspring
            unit: 'Count'
         }
 
-        @client.put_metric_data( {
-          namespace: 'Unimatrix/Worker',
-          metric_data: [ obj ]
-        } )
+        obj[ :dimensions ] += yield
+        METRICS << obj
+      end
 
+      def log_metrics
+        threads = ( 0...THREAD_POOL_SIZE ).map do
+          Thread.new do
+            begin
+              while metric_obj = METRICS.pop( true )
+                @client.put_metric_data( {
+                  namespace: 'Unimatrix/Worker',
+                  metric_data: metric_obj
+                } )
+              end
+            rescue ThreadError
+            end
+          end
+        end
+
+        threads.map(&:join)
       end
 
     end
