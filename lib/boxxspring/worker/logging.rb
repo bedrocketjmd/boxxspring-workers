@@ -44,7 +44,6 @@ module Boxxspring
             end
           end
           logger.level = self.log_level
-          logger.add_metric_data = self.add_metric_data
 
           logger
 
@@ -78,42 +77,7 @@ module Boxxspring
         log_local = ENV[ 'LOG_LOCAL' ] || 'false'
         ( log_local.to_s =~ /^true$/i ) == 0
       end
-
-      protected; def add_metric_data( type )
-        client = Aws::CloudWatch::Client.new
-        
-        client.put_metric_data( {
-          namespace: 'Unimatrix/Worker',
-          metric_data: [ metric_data( type, realm ) ]
-        } )
-      end
-
-      protected; def metric_data( type )
-        # Messages Invocations Failures Errors
-        
-        data = { metric_name: type,
-                 dimensions: [
-                   {
-                     name: 'WorkerName',
-                     value: self.human_name.gsub( ' ','_' )
-                   },
-                   {
-                     name: 'Environment',
-                     value: ENV[ 'WORKERS_ENV' ]
-                   }
-                ],
-                value: 1,
-                unit: 'Count'
-               }
-
-        if ENV[ 'WORKERS_ENV' ] == 'development'
-          username = ENV[ 'USER' ] || ENV[ 'USERNAME' ]
-          username = username.titleize.split( " " ).join( "" )
-          data[ :dimensions ] << { name: 'DeveloperName', value: username }
-        end
-        data
-      end
-
+    
     end
   end
 end
