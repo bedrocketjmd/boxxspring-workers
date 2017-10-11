@@ -3,24 +3,9 @@ module Boxxspring
     module Metrics
 
       #Example call
-      metric 'Invocations' => :count, 'Errors' => :duration do 
+      metric "Invocations", :value => 1 do 
         # stuff happens here 
-      { 
-        metric_name: "Invocations"
-        dimensions: [
-            {
-              name: 'WorkerName',
-              value: self.human_name.gsub( ' ','_' )
-            },
-            {
-              name: 'Environment',
-              value: ENV[ 'WORKERS_ENV' ]
-            }
-         ],
-         value: 1,
-         unit: 'Count'
-      }
-
+        
       end
 
 
@@ -30,20 +15,32 @@ module Boxxspring
         @client ||= Aws::CloudWatch::Client.new
       end
 
-      def metric ( type )
+      def metric ( name, value: )
         # Messages Invocations Failures Errors
         
         data = yield
         
-        if ENV[ 'WORKERS_ENV' ] == 'development'
-          username = ENV[ 'USERNAME' ].titleize.split( " " ).join( "" )
-          data[ :dimensions ] << { name: 'DeveloperName', value: username }
-        end
+        obj = { 
+          metric_name: name
+          dimensions: [
+              {
+                name: 'WorkerName',
+                value: queue_name
+              },
+              {
+                name: 'Environment',
+                value: @environment
+              }
+           ],
+           value: value,
+           unit: 'Count'
+        }
 
         @client.put_metric_data( {
           namespace: 'Unimatrix/Worker',
-          metric_data: [ data ]
+          metric_data: [ obj ]
         } )
+
       end
 
     end

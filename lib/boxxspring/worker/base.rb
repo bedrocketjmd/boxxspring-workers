@@ -11,6 +11,7 @@ module Boxxspring
       # modules
 
       include Logging
+      include Metrics
 
       #------------------------------------------------------------------------
       # class attributes
