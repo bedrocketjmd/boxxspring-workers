@@ -4,72 +4,91 @@ module Boxxspring
   module Worker
     module Metrics
 
-      # Messages Invocations Failures Errors
-      METRICS = Queue.new
-      THREAD_POOL_SIZE = 4
+
+       #WORKER
+         dimensions = {
+                        name: 'WorkerName',
+                        value: queue_name
+                      },
+                      {
+                        name: 'Environment',
+                        value: environment
+                      }
+
+          metric "Invocations" => :count, "Duration" => :duration, dimensions: dimensions do 
+            #process task
+            metric "Failure" => :count, dimensions: dimensions
+
+          rescue Error => e 
+            metrics "Errors" => :count, dimensions: dimensions
+          end
+        #WORKER
+        
 
 
 
 
+      PERMITTED_METRIC_VALUES = [ "Messages", "Invocations", "Failures", "Errors" ]
+      METRICS = Hash[ a.map { |v| [ v,{} ] } ]
+      MUTEX = Mutex.new 
 
-        #Example call
-        metric "Invocations", :value => 1 do 
-          metrics = []
-          
-          #..
-          
-          metrics << { name: "ArtifactId", value: @task.artifact_id }
-
-          #..
-
-          metrics
-        end
-
-
-
-
-
-      def initialize
+      def client
         @client ||= Aws::CloudWatch::Client.new
       end
 
-      def metric ( name, value: )
-        obj = { 
-          metric_name: name
-          dimensions: [
-              {
-                name: 'WorkerName',
-                value: queue_name
-              },
-              {
-                name: 'Environment',
-                value: @environment
-              }
-           ],
-           value: value,
-           unit: 'Count'
-        }
-
-        obj[ :dimensions ] += yield
-        METRICS << obj
+      #Get dimensions from worker...
+      def dimensions
+        @dimensions ||= dimensions
       end
 
-      def log_metrics
-        threads = ( 0...THREAD_POOL_SIZE ).map do
-          Thread.new do
-            begin
-              while metric_obj = METRICS.pop( true )
+      def initiailize
+        Thread.new do
+          while true 
+            if MUTEX.lock()
+              unless METRICS.empty?
+                
                 @client.put_metric_data( {
                   namespace: 'Unimatrix/Worker',
-                  metric_data: metric_obj
+                  metric_data: format_metrics( METRICS )
                 } )
+
               end
-            rescue ThreadError
             end
+
+            METRICS = {}
+            MUTEX.sleep(1);
           end
         end
+      end
 
-        threads.map(&:join)
+      def metric ( *metric_hashes )
+        Thread.new do
+          begin
+            if MUTEX.lock()
+              yield &block if block_given?
+
+              #parse & validate metrics hashes - then incriment counts (init at 0 if not present)
+              #Example: Invocations is the name, unit is count
+              
+              METRICS[ name ][ unit ] = METRICS[ name ][ unit ]++; 
+            end
+          ensure
+            MUTEX.unlock();
+          end
+        end
+      end
+
+      protected; def format_metrics ( counts )
+        #loop through METRICS counts and format each object per PERMITTED METRIC VALUE
+
+        obj = { 
+          metric_name: name,
+          dimensions: @dimensions
+          value: METRICS[ name ][ unit ],
+          unit: unit
+        }
+
+        #returning an array of formated metrics
       end
 
     end
