@@ -1,4 +1,5 @@
 require 'thread'
+require 'pry'
 
 module Boxxspring
   module Worker
@@ -8,24 +9,24 @@ module Boxxspring
 
 
 
-       #WORKER
-         dimensions = {
-                        name: 'WorkerName',
-                        value: queue_name
-                      },
-                      {
-                        name: 'Environment',
-                        value: environment
-                      }
+        # WORKER
+  #     dimensions = {
+  #                    name: 'WorkerName',
+  #                    value: queue_name
+  #                  },
+  #                  {
+  #                    name: 'Environment',
+  #                    value: environment
+  #                  }
 
-          metric "Invocations" => :count, "Other Metric" => :duration do 
-            #process task
-            metric "Failure" => :count
+  #      metric "Invocations" => :count, "Other Metric" => :duration do 
+  #        #process task
+  #        metric "Failure" => :count
 
-          rescue Error => e 
-            metrics "Errors" => :count
-          end
-        #WORKER
+  #      rescue Error => e 
+  #        metrics "Errors" => :count
+  #      end
+         # WORKER
         
 
 
@@ -35,7 +36,6 @@ module Boxxspring
       PERMITTED_METRIC_NAMES = [ "Messages", "Invocations", "Failures", "Errors" ]
       PERMITTED_METRIC_UNITS = [ "Count" ]
       
-      METRICS = {}
       MUTEX = Mutex.new 
 
       def client
@@ -47,7 +47,12 @@ module Boxxspring
         @dimensions ||= dimensions
       end
 
+      def initialize_metrics_count
+        @metrics ||= refresh_metrics_count
+      end
+
       def initiailize
+        binding.pry
         initialize_metrics_count
 
         Thread.new do
@@ -63,7 +68,7 @@ module Boxxspring
               end
             end
 
-            initialize_metrics_count
+            @metrics = refresh_metrics_count
             MUTEX.sleep(1);
           end
         end
@@ -72,15 +77,15 @@ module Boxxspring
       def metric ( *args )
         Thread.new do
           begin
+            yield if block_given?  
+            
             if MUTEX.lock()
-              yield &block if block_given?
-
               args.each do | metric_hash |
                 name = metric_hash.key
                 unit = metric_hash[ name ]
 
-                if name.in? PERMITTED_METRIC_NAMES && unit.in? PERMITTED_METRIC_UNITS
-                  METRICS[ name ][ unit ] = METRICS[ name ][ unit ]++; 
+                if name.in?( PERMITTED_METRIC_NAMES ) && unit.in?( PERMITTED_METRIC_UNITS )
+                  METRICS[ name ][ unit ] = METRICS[ name ][ unit ] + 1 
                 end
 
               end
@@ -92,12 +97,12 @@ module Boxxspring
         end
       end
 
-      protected; def initialize_metrics_count
-        METRICS = Hash[ PERMITTED_METRIC_NAMES.map { | name |
-                    [ name, Hash[ PERMITTED_METRIC_UNITS.map { | unit |
-                      [ unit, 0 ]
-                    ] } ] 
-                  } ]
+      protected; def refresh_metrics_count
+        Hash[ PERMITTED_METRIC_NAMES.map { | name |
+          [ name, Hash[ PERMITTED_METRIC_UNITS.map { | unit |
+            [ unit, 0 ]
+           } ] ] 
+        } ]
       end
 
       protected; def format_metrics ( counts )
@@ -108,7 +113,7 @@ module Boxxspring
           
             formatted_metrics << { 
               metric_name: name,
-              dimensions: @dimensions
+              dimensions: @dimensions,
               value: count,
               unit: unit
             }
