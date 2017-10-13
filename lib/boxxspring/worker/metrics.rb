@@ -5,6 +5,9 @@ module Boxxspring
     module Metrics
 
 
+
+
+
        #WORKER
          dimensions = {
                         name: 'WorkerName',
@@ -15,12 +18,12 @@ module Boxxspring
                         value: environment
                       }
 
-          metric "Invocations" => :count, "Duration" => :duration, dimensions: dimensions do 
+          metric "Invocations" => :count, "Other Metric" => :duration do 
             #process task
-            metric "Failure" => :count, dimensions: dimensions
+            metric "Failure" => :count
 
           rescue Error => e 
-            metrics "Errors" => :count, dimensions: dimensions
+            metrics "Errors" => :count
           end
         #WORKER
         
@@ -28,8 +31,11 @@ module Boxxspring
 
 
 
-      PERMITTED_METRIC_VALUES = [ "Messages", "Invocations", "Failures", "Errors" ]
-      METRICS = Hash[ a.map { |v| [ v,{} ] } ]
+
+      PERMITTED_METRIC_NAMES = [ "Messages", "Invocations", "Failures", "Errors" ]
+      PERMITTED_METRIC_UNITS = [ "Count" ]
+      
+      METRICS = {}
       MUTEX = Mutex.new 
 
       def client
@@ -42,6 +48,8 @@ module Boxxspring
       end
 
       def initiailize
+        initialize_metrics_count
+
         Thread.new do
           while true 
             if MUTEX.lock()
@@ -55,41 +63,60 @@ module Boxxspring
               end
             end
 
-            METRICS = {}
+            initialize_metrics_count
             MUTEX.sleep(1);
           end
         end
       end
 
-      def metric ( *metric_hashes )
+      def metric ( *args )
         Thread.new do
           begin
             if MUTEX.lock()
               yield &block if block_given?
 
-              #parse & validate metrics hashes - then incriment counts (init at 0 if not present)
-              #Example: Invocations is the name, unit is count
-              
-              METRICS[ name ][ unit ] = METRICS[ name ][ unit ]++; 
+              args.each do | metric_hash |
+                name = metric_hash.key
+                unit = metric_hash[ name ]
+
+                if name.in? PERMITTED_METRIC_NAMES && unit.in? PERMITTED_METRIC_UNITS
+                  METRICS[ name ][ unit ] = METRICS[ name ][ unit ]++; 
+                end
+
+              end
             end
           ensure
             MUTEX.unlock();
           end
+
         end
       end
 
-      protected; def format_metrics ( counts )
-        #loop through METRICS counts and format each object per PERMITTED METRIC VALUE
-
-        obj = { 
-          metric_name: name,
-          dimensions: @dimensions
-          value: METRICS[ name ][ unit ],
-          unit: unit
-        }
-
-        #returning an array of formated metrics
+      protected; def initialize_metrics_count
+        METRICS = Hash[ PERMITTED_METRIC_NAMES.map { | name |
+                    [ name, Hash[ PERMITTED_METRIC_UNITS.map { | unit |
+                      [ unit, 0 ]
+                    ] } ] 
+                  } ]
       end
+
+      protected; def format_metrics ( counts )
+        formatted_metrics = []
+
+        METRICS.each do | name, units_hash |
+          units_hash.each do | unit, count |
+          
+            formatted_metrics << { 
+              metric_name: name,
+              dimensions: @dimensions
+              value: count,
+              unit: unit
+            }
+          end
+        end
+        formatted_metrics
+      end
+
 
     end
   end
