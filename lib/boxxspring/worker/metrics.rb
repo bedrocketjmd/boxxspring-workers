@@ -58,11 +58,11 @@ module Boxxspring
         Thread.new do
           while true 
             if MUTEX.lock()
-              unless METRICS.empty?
+              unless @metrics.empty?
                 
                 @client.put_metric_data( {
                   namespace: 'Unimatrix/Worker',
-                  metric_data: format_metrics( METRICS )
+                  metric_data: format_metrics( @metrics )
                 } )
 
               end
@@ -85,7 +85,7 @@ module Boxxspring
                 unit = metric_hash[ name ]
 
                 if name.in?( PERMITTED_METRIC_NAMES ) && unit.in?( PERMITTED_METRIC_UNITS )
-                  METRICS[ name ][ unit ] = METRICS[ name ][ unit ] + 1 
+                  @metrics[ name ][ unit ] = @metrics[ name ][ unit ] + 1 
                 end
 
               end
@@ -108,7 +108,7 @@ module Boxxspring
       protected; def format_metrics ( counts )
         formatted_metrics = []
 
-        METRICS.each do | name, units_hash |
+        @metrics.each do | name, units_hash |
           units_hash.each do | unit, count |
           
             formatted_metrics << { 
