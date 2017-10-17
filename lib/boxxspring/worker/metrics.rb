@@ -1,38 +1,9 @@
 require 'thread'
-require 'pry'
 
 module Boxxspring
   module Worker
     module Metrics
-
-
-
-
-
-        # WORKER
-  #     dimensions = {
-  #                    name: 'WorkerName',
-  #                    value: queue_name
-  #                  },
-  #                  {
-  #                    name: 'Environment',
-  #                    value: environment
-  #                  }
-
-  #      metric "Invocations" => :count, "Other Metric" => :duration do 
-  #        #process task
-  #        metric "Failure" => :count
-
-  #      rescue Error => e 
-  #        metrics "Errors" => :count
-  #      end
-         # WORKER
-        
-
-
-
-
-
+      
       PERMITTED_METRIC_NAMES = [ "Messages", "Invocations", "Failures", "Errors" ]
       PERMITTED_METRIC_UNITS = [ "Count" ]
       
@@ -42,7 +13,6 @@ module Boxxspring
         @client ||= Aws::CloudWatch::Client.new
       end
 
-      #Get dimensions from worker...
       def dimensions
         @dimensions ||= dimensions
       end
@@ -51,8 +21,7 @@ module Boxxspring
         @metrics ||= refresh_metrics_count
       end
 
-      def initiailize
-        binding.pry
+      def initialize
         initialize_metrics_count
 
         Thread.new do
@@ -77,8 +46,6 @@ module Boxxspring
       def metric ( *args )
         Thread.new do
           begin
-            yield if block_given?  
-            
             if MUTEX.lock()
               args.each do | metric_hash |
                 name = metric_hash.key
@@ -92,8 +59,9 @@ module Boxxspring
             end
           ensure
             MUTEX.unlock();
+            yield if block_given?  
+          
           end
-
         end
       end
 
@@ -121,7 +89,6 @@ module Boxxspring
         end
         formatted_metrics
       end
-
 
     end
   end
