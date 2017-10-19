@@ -5,16 +5,16 @@ module Boxxspring
     module Metrics
       
       PERMITTED_METRIC_NAMES = [ "Messages", "Invocations", "Failures", "Errors" ]
-      PERMITTED_METRIC_UNITS = [ "Count" ]
+      PERMITTED_METRIC_UNITS = [ "Count", "Duration" ]
       
       MUTEX = Mutex.new 
 
       def client
         @client ||= Aws::CloudWatch::Client.new
       end
-
+      
       def dimensions
-        @dimensions ||= dimensions
+        @dimensions ||= {}
       end
 
       def initialize_metrics_count
@@ -27,7 +27,7 @@ module Boxxspring
         Thread.new do
           while true 
             if MUTEX.lock()
-              unless @metrics.empty?
+              unless @metrics[ "empty" ]
                 
                 @client.put_metric_data( {
                   namespace: 'Unimatrix/Worker',
@@ -43,15 +43,18 @@ module Boxxspring
         end
       end
 
-      def metric ( *args )
+      def metric ( *args, dimensions: = nil )
         Thread.new do
           begin
             if MUTEX.lock()
+              @dimensions = dimensions if !dimensions.nil?
+
               args.each do | metric_hash |
                 name = metric_hash.key
                 unit = metric_hash[ name ]
 
                 if name.in?( PERMITTED_METRIC_NAMES ) && unit.in?( PERMITTED_METRIC_UNITS )
+                  @metrics[ "empty" ] = false
                   @metrics[ name ][ unit ] = @metrics[ name ][ unit ] + 1 
                 end
 
@@ -66,11 +69,15 @@ module Boxxspring
       end
 
       protected; def refresh_metrics_count
-        Hash[ PERMITTED_METRIC_NAMES.map { | name |
+        hash = Hash[ PERMITTED_METRIC_NAMES.map { | name |
           [ name, Hash[ PERMITTED_METRIC_UNITS.map { | unit |
             [ unit, 0 ]
            } ] ] 
         } ]
+        
+        hash[ "empty" ] = true
+        
+        hash
       end
 
       protected; def format_metrics ( counts )
