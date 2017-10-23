@@ -25,33 +25,39 @@ module Boxxspring
         initialize_metrics_count
 
         Thread.new do
-          while true 
-            if MUTEX.lock()
-              unless @metrics[ "empty" ]
-                
-                @client.put_metric_data( {
-                  namespace: 'Unimatrix/Worker',
-                  metric_data: format_metrics( @metrics )
-                } )
+          loop do 
+            sleep(1)
+            
+            unless @metrics[ "empty" ]
+              if MUTEX.lock()
+                begin
+              
+                  client.put_metric_data( {
+                    namespace: 'Unimatrix/Worker',
+                    metric_data: format_metrics( @metrics )
+                  } )
 
+                  @metrics = refresh_metrics_count
+
+                ensure
+                  MUTEX.unlock
+                end
               end
             end
-
-            @metrics = refresh_metrics_count
-            MUTEX.sleep(1);
           end
         end
       end
 
-      def metric ( *args, dimensions: = nil )
+      def metric ( *args, **keyword_args )
         Thread.new do
           begin
             if MUTEX.lock()
-              @dimensions = dimensions if !dimensions.nil?
+              
+              @dimensions = keyword_args[ :dimensions ] \
+                if keyword_args.key?( :dimensions )
 
               args.each do | metric_hash |
-                name = metric_hash.key
-                unit = metric_hash[ name ]
+                name, unit = metric_hash.first
 
                 if name.in?( PERMITTED_METRIC_NAMES ) && unit.in?( PERMITTED_METRIC_UNITS )
                   @metrics[ "empty" ] = false
@@ -63,7 +69,7 @@ module Boxxspring
           ensure
             MUTEX.unlock();
             yield if block_given?  
-          
+
           end
         end
       end
@@ -82,18 +88,23 @@ module Boxxspring
 
       protected; def format_metrics ( counts )
         formatted_metrics = []
+        @metrics.delete( 'empty' )
 
         @metrics.each do | name, units_hash |
           units_hash.each do | unit, count |
-          
-            formatted_metrics << { 
-              metric_name: name,
-              dimensions: @dimensions,
-              value: count,
-              unit: unit
-            }
+            if count > 0
+
+              formatted_metrics << { 
+                metric_name: name,
+                dimensions: @dimensions,
+                value: count,
+                unit: unit
+              }
+            
+            end
           end
         end
+
         formatted_metrics
       end
 
