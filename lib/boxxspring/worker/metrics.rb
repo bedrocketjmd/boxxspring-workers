@@ -6,7 +6,6 @@ module Boxxspring
       
       PERMITTED_METRIC_NAMES = [ "Messages", "Invocations", "Failures", "Errors" ]
       PERMITTED_METRIC_UNITS = [ :count, :seconds, :megabit ]
-
       
       MUTEX = Mutex.new 
 
@@ -28,21 +27,20 @@ module Boxxspring
         Thread.new do
           loop do             
             unless @metrics[ "empty" ]
+              
               MUTEX.synchronize do 
                 metrics_payload = Hash.new( @metrics )
                 @metrics = refresh_metrics_count
               end
 
               begin
-            
                 client.put_metric_data( {
                   namespace: 'Unimatrix/Worker',
                   metric_data: format_metrics( metrics_payload )
                 } )
 
-                @metrics = refresh_metrics_count
-
-              ensure
+              rescue
+                raise "An error has occured when making a request to the AWS Cloudwatch endpoint 'put_metric_data'."
               end
 
               sleep 1 
@@ -70,7 +68,7 @@ module Boxxspring
       end
 
       def metric_with_block
-        #time yield
+        #time yield if unit indicates
       end
 
       def metric_without_block
@@ -89,24 +87,21 @@ module Boxxspring
       def add_metric_to_hash ( arr )
         name, data, unit = arr
          
-        begin
-          if MUTEX.lock()
-            args.each do | metric_hash |
-              if name.in?( PERMITTED_METRIC_NAMES ) && unit.in?( PERMITTED_METRIC_UNITS )
-                @metrics[ "empty" ] = false
-                
-                unit = unit.to_s.capitalize 
-                
-                unless data
-                  @metrics[ name ][ unit ] = @metrics[ name ][ unit ] + 1 
-                else
-                  @metrics[ name ][ unit ] = data
-                end
+        MUTEX.synchronize do
+          args.each do | metric_hash |
+            if name.in?( PERMITTED_METRIC_NAMES ) && unit.in?( PERMITTED_METRIC_UNITS )
+              @metrics[ "empty" ] = false
+              
+              unit = unit.to_s.capitalize 
+              
+              unless data
+                @metrics[ name ][ unit ] = @metrics[ name ][ unit ] + 1 
+              else
+                @metrics[ name ][ unit ] = data
               end
+
             end
           end
-        ensure
-          MUTEX.unlock();
         end
       end
 
