@@ -1,11 +1,12 @@
 require 'thread'
+require 'benchmark'
 
 module Boxxspring
   module Worker
     module Metrics
       
       PERMITTED_METRIC_NAMES = [ "Messages", "Invocations", "Failures", "Errors" ]
-      PERMITTED_METRIC_UNITS = [ :count, :seconds, :megabit ]
+      PERMITTED_METRIC_UNITS = [ :count, :milliseconds ]
       
       MUTEX = Mutex.new 
 
@@ -13,16 +14,28 @@ module Boxxspring
         @client ||= Aws::CloudWatch::Client.new
       end
       
-      def dimensions
-        @dimensions ||= {}
+      def metric_defaults( **args )
+        defaults = [
+          {
+            name: "WorkerName",
+            value: args[ :name ].titleize.split( " " ).join( "" )
+          },
+          {
+            name: "Environment",
+            value: args[ :env ]
+          }
+        ]
+
+        args.key?( :defaults ) ? @dimensions = args[ :defaults ] \
+          : @dimensions = defaults
       end
 
-      def initialize_metrics_count
-        @metrics ||= refresh_metrics_count
+      def initialize_metrics_hash
+        @metrics ||= refresh_metrics_hash
       end
 
       def initialize
-        initialize_metrics_count
+        initialize_metrics_hash
 
         Thread.new do
           loop do             
@@ -30,13 +43,13 @@ module Boxxspring
               
               MUTEX.synchronize do 
                 metrics_payload = Hash.new( @metrics )
-                @metrics = refresh_metrics_count
+                @metrics = refresh_metrics_hash
               end
 
               begin
                 client.put_metric_data( {
                   namespace: 'Unimatrix/Worker',
-                  metric_data: format_metrics( metrics_payload )
+                  metric_data: format_metrics_hash( metrics_payload )
                 } )
 
               rescue
@@ -49,6 +62,7 @@ module Boxxspring
         end
       end
 
+
       #metric "Invocations", :seconds
         #one invocation, tracking seconds
       #metric ( [ "Invocations", 1, :seconds ], [ "Failures", 1 ] )
@@ -56,36 +70,47 @@ module Boxxspring
       #metric "Error", 2, :megabits
         #two megabits as an error point 
 
+
       #metric (name, optional int, optional unit) - can be array
       def metric ( *args )
-        block_given? ? metric_with_block : metric_without_block
-      
+        time_elapsed = nil
         args = [ args ] unless args.first.is_a? Array
-
+        
         args.each do | m |
-          add_metric_to_hash( parse_metric( args ) )
+          block_given? ? time_elapsed = metric_with_block( m, &block ) \  
+            metric_without_block( m )
+          
+          add_metric_to_hash( parse_metric( m, time_elapsed ) )
         end
       end
 
-      def metric_with_block
-        #time yield if unit indicates
+      def metric_with_block ( metric, &block )
+       metric = parse_metric( metric )
+       
+       metric[ :unit ] != :count ? \
+         Benchmark.realtime( yield ) : nil
       end
 
-      def metric_without_block
-        #validate if unit requires block
+      def metric_without_block ( metric )
+        metric = parse_metric( metric )
+        
+        unless metric[ :unit ] == :count
+          raise "This unit type requires a block."
+        end
       end
 
-      def parse_metric ( arr ) 
+      def parse_metric ( arr, time = nil ) 
         name, data, unit = arr.first, 1, :count
         
+        data = time unless time.nil?
         data = arr[ 2 ] if arr[ 2 ].is_a? Integer 
         unit = arr[ 3 ] unless arr[ 3 ].nil?
 
-        return name, data, unit
+        return { name: name, data: data, unit: unit }
       end
 
-      def add_metric_to_hash ( arr )
-        name, data, unit = arr
+      def add_metric_to_hash ( metric )
+        name, data, unit = metric.values
          
         MUTEX.synchronize do
           args.each do | metric_hash |
@@ -105,7 +130,7 @@ module Boxxspring
         end
       end
 
-      protected; def refresh_metrics_count
+      protected; def refresh_metrics_hash
         hash = Hash[ PERMITTED_METRIC_NAMES.map { | name |
           [ name, Hash[ PERMITTED_METRIC_UNITS.map { | unit |
             [ unit.to_s.capitalize, 0 ]
@@ -117,18 +142,18 @@ module Boxxspring
         hash
       end
 
-      protected; def format_metrics ( counts )
+      protected; def format_metrics_hash ( counts )
         formatted_metrics = []
         @metrics.delete( 'empty' )
 
         @metrics.each do | name, units_hash |
-          units_hash.each do | unit, count |
+          units_hash.each do | unit, val |
             if count > 0
 
               formatted_metrics << { 
                 metric_name: name,
                 dimensions: @dimensions,
-                value: count,
+                value: val,
                 unit: unit
               }
             
