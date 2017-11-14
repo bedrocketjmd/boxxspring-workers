@@ -1,7 +1,10 @@
 class MetricComputer
 
   PERMITTED_METRIC_NAMES = [ "Messages", "Invocations", "Failures", "Errors" ]
-  PERMITTED_METRIC_UNITS = [ :count, :microseconds ]
+  PERMITTED_METRIC_UNITS = [ 
+    { "counted": :count }, 
+    { "timed": :microseconds } 
+  ]
 
   def dimensions
     @dimensions ||= {}
@@ -20,7 +23,9 @@ class MetricComputer
   end
 
   def initialize( hash, dimensions )
-    if name.in?( PERMITTED_METRIC_NAMES ) && unit.in?( PERMITTED_METRIC_UNITS )
+    if name.in?( PERMITTED_METRIC_NAMES ) && \
+      unit.in?( PERMITTED_METRIC_UNITS ).map( &:values ).flatten
+      
       @name, @value, @unit = hash.values
       @dimensions = dimensions
     
@@ -31,15 +36,18 @@ class MetricComputer
   end
 
   def start
-    @value = Time.now
+    unit.in?( PERMITTED_METRIC_UNITS[ "counted" ] ) ? increment : \
+      @value = Time.now
   end
 
-  def stop
-    @value -= Time.now
+  def stop 
+    unless unit.in?( PERMITTED_METRIC_UNITS[ "counted" ] )
+      @value -= Time.now
+    end
   end
 
   def increment
-    @value += @value
+    @value += @value 
   end
 
 end

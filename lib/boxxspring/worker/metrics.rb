@@ -1,5 +1,4 @@
 require 'thread'
-require 'benchmark'
 
 module Boxxspring
   module Worker
@@ -7,14 +6,43 @@ module Boxxspring
       
       MUTEX = Mutex.new 
 
-      def metrics
-        @metrics ||= {}
-      end
-
       def client
         @client ||= Aws::CloudWatch::Client.new
       end
       
+      def initialize_metrics
+        @metrics ||= []
+      end
+      
+      def initialize
+        initialize_metrics
+
+        Thread.new do
+          loop do 
+            unless @metrics.empty?
+              
+              MUTEX.synchronize do 
+                metrics_payload = @metrics.map( &:to_json )
+                initialize_metrics
+              end
+
+              begin
+                client.put_metric_data( {
+                  namespace: 'Unimatrix/Worker',
+                  metric_data: metrics_payload
+                } )
+
+              rescue
+                raise "An error has occured when making a request to the AWS
+                  Cloudwatch endpoint 'put_metric_data'."
+              end
+
+              sleep 1 
+            end
+          end
+        end
+      end
+
       #Step 1
       def metric_defaults( **args )
         defaults = [
@@ -32,37 +60,6 @@ module Boxxspring
           : @dimensions = defaults
       end
 
-      def initialize
-        refresh_metrics_hash
-
-        Thread.new do
-          loop do 
-            unless @metrics.empty?
-              
-              MUTEX.synchronize do 
-                #copy
-                metrics_payload = Hash.new( @metrics )
-                #refresh
-                @metrics = refresh_metric_computers
-              end
-
-              begin
-                client.put_metric_data( {
-                  namespace: 'Unimatrix/Worker',
-                  metric_data: metrics
-                } )
-
-              rescue
-                raise "An error has occured when making a request to the AWS
-                  Cloudwatch endpoint 'put_metric_data'."
-              end
-
-              sleep 1 
-            end
-          end
-        end
-      end
-
 
       #metric "Invocations", :seconds
       #metric ( [ "Invocations", 1, :seconds ], [ "Failures", 1 ] )
@@ -72,26 +69,23 @@ module Boxxspring
       def metric ( *args )
         args = [ args ] unless args.first.is_a? Array
         
-          #If computer does not exsist, create, else access existing
-          #These computers are @metrics
-          #Does this need to be mutex locked?
-        computers = args.map do | metric |
-          metric = parse_metric( metric )
-          
-          computer_class =
-            "#{ metric[ :unit ].to_s.capitalize }MetricComputer".constantize
-          computer_class.new( metric, @dimensions )
+        #If computer does not exist, create, else access existing?
+        MUTEX.synchronize do 
+          new_metrics = args.map do | metric |
+            metric = parse_metric( metric )
+            
+            computer_class =
+              "#{ metric[ :unit ].to_s.capitalize }MetricComputer".constantize
+            computer_class.new( metric, @dimensions )
+          end
+
+          @metrics.concat new_metrics
+
+          @metrics.each( &:start )
+          yield if block_given?
+          @metrics.each( &:stop )
         end
 
-        if block_given?
-          computers.each( &:start )
-          yield 
-          computers.each( &:stop )
-        else
-          computers.each( &:increment )
-        end
-
-        @metrics = computers.map( &:to_json )
       end
 
       def parse_metric ( arr )
@@ -101,12 +95,6 @@ module Boxxspring
         unit = arr[ 3 ] unless arr[ 3 ].nil?
 
         { name: name, data: data, unit: unit }
-      end
-
-      def wipe_metrics_computers
-      end
-
-      def copy_metrics_computers
       end
 
     end
