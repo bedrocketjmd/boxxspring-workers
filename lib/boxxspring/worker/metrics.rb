@@ -71,23 +71,24 @@ module Boxxspring
         #two megabits as an error point 
 
 
+      #always put timer as the first metric if passing many
       #metric (name, optional int, optional unit) - can be array
       def metric ( *args )
         time_elapsed = nil
         args = [ args ] unless args.first.is_a? Array
         
-        args.each do | m |
-          block_given? ? time_elapsed = metric_with_block( m, &block ) \  
+        args.each_with_index do | m, i |
+          block_given? ? time_elapsed = metric_with_block( m, i, &block ) \  
             metric_without_block( m )
           
           add_metric_to_hash( parse_metric( m, time_elapsed ) )
         end
       end
 
-      def metric_with_block ( metric, &block )
+      def metric_with_block ( metric, *index, &block )
        metric = parse_metric( metric )
        
-       metric[ :unit ] != :count ? \
+       metric[ :unit ] != :count && index == 0 ? \
          Benchmark.realtime( yield ) : nil
       end
 
