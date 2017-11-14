@@ -87,6 +87,20 @@ module Boxxspring
 
       def metric_with_block ( metric, *index, &block )
        metric = parse_metric( metric )
+
+       #Per metric given as parameter (metric Invocations :count)
+        computers = metrics.map do | metric |
+          computer_class =
+            "#{ metric[ :unit ].to_s.capitalize }MetricComputer".constantize
+          computer_class.new( metric[ :name ], options )
+        end
+
+        computer.each( &:start )
+        yield block if block_given?
+        computer.each( &:stop )
+
+        payload = computers.map( &:to_json )
+
        
        metric[ :unit ] != :count && index == 0 ? \
          Benchmark.realtime( yield ) : nil
