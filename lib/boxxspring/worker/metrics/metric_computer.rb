@@ -1,10 +1,12 @@
+require 'pry'
 class MetricComputer
 
   PERMITTED_METRIC_NAMES = [ "Messages", "Invocations", "Failures", "Errors" ]
-  PERMITTED_METRIC_UNITS = [ 
-    { "counted": :count }, 
-    { "timed": :microseconds } 
-  ]
+  PERMITTED_METRIC_UNITS =  { 
+      "counted": [ :count ], 
+      "timed": [ :microseconds ] 
+    } 
+  
 
   def dimensions
     @dimensions ||= {}
@@ -23,26 +25,25 @@ class MetricComputer
   end
 
   def initialize( hash, dimensions )
-    if name.in?( PERMITTED_METRIC_NAMES ) && \
-      unit.in?( PERMITTED_METRIC_UNITS ).map( &:values ).flatten
+    @name, @value, @unit = hash.values
+    @dimensions = dimensions
+
+    unless name.in?( PERMITTED_METRIC_NAMES ) && \
+      unit.in?( PERMITTED_METRIC_UNITS.values.flatten )
       
-      @name, @value, @unit = hash.values
-      @dimensions = dimensions
-    
-    else
-      raise "A metric #{ name, unit, value } is not permitted."
+      raise "A metric #{ name } #{ value } #{ unit } is not permitted."
     
     end
   end
 
   def start
-    unit.in?( PERMITTED_METRIC_UNITS[ "counted" ] ) ? increment : \
+    unit.in?( PERMITTED_METRIC_UNITS[ :counted ] ) ? increment : \
       @value = Time.now
   end
 
   def stop 
-    unless unit.in?( PERMITTED_METRIC_UNITS[ "counted" ] )
-      @value -= Time.now
+    unless unit.in?( PERMITTED_METRIC_UNITS[ :counted ] )
+      @value = Time.now - @value
     end
   end
 

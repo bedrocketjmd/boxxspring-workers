@@ -1,4 +1,5 @@
 require 'thread'
+require 'pry'
 
 module Boxxspring
   module Worker
@@ -11,7 +12,7 @@ module Boxxspring
       end
       
       def initialize_metrics
-        @metrics ||= []
+        @metrics = []
       end
       
       def initialize
@@ -20,19 +21,21 @@ module Boxxspring
         Thread.new do
           loop do 
             unless @metrics.empty?
-              
-              MUTEX.synchronize do 
-                metrics_payload = @metrics.map( &:to_json )
-                initialize_metrics
-              end
-
               begin
+                metrics_payload = []
+                
+                MUTEX.synchronize do 
+                  jsonified = @metrics.map( &:to_json )
+                  jsonified.each{ | m | metrics_payload << m.dup }
+                  initialize_metrics
+                end
+
                 client.put_metric_data( {
                   namespace: 'Unimatrix/Worker',
                   metric_data: metrics_payload
                 } )
 
-              rescue
+              rescue Error => e
                 raise "An error has occured when making a request to the AWS
                   Cloudwatch endpoint 'put_metric_data'."
               end
@@ -71,12 +74,12 @@ module Boxxspring
         
         #If computer does not exist, create, else access existing?
         MUTEX.synchronize do 
-          new_metrics = args.map do | metric |
-            metric = parse_metric( metric )
+          new_metrics = args.map do | m |
+            m = parse_metric( m )
             
             computer_class =
-              "#{ metric[ :unit ].to_s.capitalize }MetricComputer".constantize
-            computer_class.new( metric, @dimensions )
+              "#{ m[ :unit ].to_s.capitalize }MetricComputer".constantize
+            computer_class.new( m, @dimensions )
           end
 
           @metrics.concat new_metrics
@@ -85,14 +88,14 @@ module Boxxspring
           yield if block_given?
           @metrics.each( &:stop )
         end
-
       end
 
       def parse_metric ( arr )
         name, data, unit = arr.first, 1, :count
 
-        data = arr[ 2 ] if arr[ 2 ].is_a? Integer
-        unit = arr[ 3 ] unless arr[ 3 ].nil?
+        data = arr[ 1 ] if arr[ 1 ].is_a? Integer
+        unit = arr[ 1 ] if arr[ 1 ].is_a? Symbol
+        unit = arr[ 2 ] unless arr[ 2 ].nil?
 
         { name: name, data: data, unit: unit }
       end

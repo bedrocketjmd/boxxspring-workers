@@ -69,13 +69,14 @@ module Boxxspring
             payload = self.payload_from_message( message )
 
             if payload.present?
+              metric_defaults name: self.human_name, env: environment 
+              metric "Messages"
+              
               begin
-                metric_defaults name: self.human_name, env: environment
-                metric "Messages", :seconds
-
                 result = self.process_payload( payload )
                 # note: if an exception is raised the message will be deleted
                 self.delete_message( message ) unless result == false
+
               rescue StandardError => error
                 metric "Failure"
 
@@ -85,6 +86,7 @@ module Boxxspring
                 self.logger.error( error.message )
                 self.logger.info( error.backtrace.join( "\n" ) )
               end
+
             else
               self.delete_message( message )
               self.logger.error(

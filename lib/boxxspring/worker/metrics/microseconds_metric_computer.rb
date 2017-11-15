@@ -5,7 +5,7 @@ class MicrosecondsMetricComputer < MetricComputer
       metric_name: name,
       dimensions: dimensions,
       value: compute_value,
-      unit: unit
+      unit: unit.to_s.capitalize
     }
   end
 
