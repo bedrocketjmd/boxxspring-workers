@@ -45,7 +45,6 @@ module Boxxspring
         end
       end
 
-      #Step 1
       def metric_defaults( **args )
         defaults = [
           {
@@ -57,9 +56,6 @@ module Boxxspring
             value: args[ :env ]
           }
         ]
-
-        args.key?( :defaults ) ? @dimensions = args[ :defaults ] \
-          : @dimensions = defaults
       end
 
 
@@ -67,25 +63,27 @@ module Boxxspring
       #metric ( [ "Invocations", 1, :seconds ], [ "Failures", 1 ] )
       #metric "Error", 2, :megabits
 
-      #Step 2
       def metric ( *args )
         args = [ args ] unless args.first.is_a? Array
+        dimensions = metric_defaults name: self.human_name, env: environment
         
-        #If computer does not exist, create, else access existing?
         MUTEX.synchronize do 
           new_metrics = args.map do | m |
             m = parse_metric( m )
             
             computer_class =
               "#{ m[ :unit ].to_s.capitalize }MetricComputer".constantize
-            computer_class.new( m, @dimensions )
+            computer_class.new( m, dimensions )
           end
 
           @metrics.concat new_metrics
+ 
+          if block_given?
+            @metrics.each( &:start )
+            yield
+            @metrics.each( &:stop )
+          end
 
-          @metrics.each( &:start )
-          yield if block_given?
-          @metrics.each( &:stop )
         end
       end
 

@@ -36,18 +36,15 @@ class MetricComputer
   end
 
   def start
-    unit.in?( PERMITTED_METRIC_UNITS[ :counted ] ) ? increment : \
+    unless unit.in?( PERMITTED_METRIC_UNITS[ :counted ] )
       @value = Time.now
+    end
   end
 
   def stop 
     unless unit.in?( PERMITTED_METRIC_UNITS[ :counted ] )
       @value = Time.now - @value
     end
-  end
-
-  def increment
-    @value += @value 
   end
 
 end

@@ -70,7 +70,6 @@ module Boxxspring
 
             if payload.present?
               begin
-                metric_defaults name: self.human_name, env: environment 
                 metric "Messages"
                 
                 result = self.process_payload( payload )
