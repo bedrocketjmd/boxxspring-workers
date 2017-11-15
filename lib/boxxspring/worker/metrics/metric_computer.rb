@@ -1,4 +1,3 @@
-require 'pry'
 class MetricComputer
 
   PERMITTED_METRIC_NAMES = [ "Messages", "Invocations", "Failures", "Errors" ]
