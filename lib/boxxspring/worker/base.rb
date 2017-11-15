@@ -69,17 +69,12 @@ module Boxxspring
             payload = self.payload_from_message( message )
 
             if payload.present?
-              metric_defaults name: self.human_name, env: environment 
-              metric "Messages"
-              
               begin
                 result = self.process_payload( payload )
                 # note: if an exception is raised the message will be deleted
                 self.delete_message( message ) unless result == false
 
               rescue StandardError => error
-                metric "Failure"
-
                 self.logger.error(
                   "The #{ self.human_name } failed to process the payload."
                 )
@@ -88,6 +83,8 @@ module Boxxspring
               end
 
             else
+              metric "Failures"
+
               self.delete_message( message )
               self.logger.error(
                 "The #{ self.human_name } received an invalid payload."
@@ -156,6 +153,9 @@ module Boxxspring
 
       protected; def process_payload( payload )
         if self.class.processor.present?
+          metric_defaults name: self.human_name, env: environment 
+          metric "Messages"
+              
           self.class.processor.call( payload )
         else
           raise RuntimeError.new(

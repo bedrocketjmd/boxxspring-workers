@@ -10,7 +10,7 @@ class CountMetricComputer < MetricComputer
   end
 
   private; def compute_value
-    @value
+    @value.floor
   end
 
 end
