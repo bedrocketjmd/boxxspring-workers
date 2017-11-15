@@ -14,6 +14,10 @@ module Boxxspring
         @metrics = []
       end
       
+      def dimensions
+        @dimensions ||= []
+      end
+      
       def initialize
         initialize_metrics
 
@@ -24,9 +28,9 @@ module Boxxspring
                 metrics_payload = []
                 
                 MUTEX.synchronize do 
-                  jsonified = @metrics.map( &:to_json )
-                  jsonified.each{ | m | metrics_payload << m.dup }
-                  initialize_metrics
+                  idle_computers = @metrics.select{ | m | m.state == "idle" }
+                  metrics_payload = idle_computers.map( &:to_json )
+                  clear_idle_computers
                 end
 
                 client.put_metric_data( {
@@ -45,46 +49,58 @@ module Boxxspring
         end
       end
 
-      def metric_defaults( **args )
-        defaults = [
-          {
-            name: "WorkerName",
-            value: args[ :name ].titleize.split( " " ).join( "" )
-          },
-          {
-            name: "Environment",
-            value: args[ :env ]
-          }
-        ]
+      def set_metric_defaults( **args )
+        new_dimensions = []
+        schema = {
+                   name: "",
+                   value: ""
+                 }
+        
+        dimensions.last.each{ | d | new_dimensions << d.dup } \
+          unless dimensions.empty?
+
+         args.each do | k, v |
+           dimension = schema.clone
+           dimension[ :name ] = k.to_s.camelize
+           dimension[ :value ] = v
+
+           new_dimensions << dimension
+         end
+
+         dimensions.push new_dimensions
+
+         yield if block_given?
       end
 
 
-      #metric "Invocations", :seconds
-      #metric ( [ "Invocations", 1, :seconds ], [ "Failures", 1 ] )
-      #metric "Error", 2, :megabits
+      #metric :invocations", :seconds
+      #metric ( [ :invocations", 1, :seconds ], [ :failures, 1 ] )
+      #metric error, 2, :count
 
       def metric ( *args )
         args = [ args ] unless args.first.is_a? Array
-        dimensions = metric_defaults name: self.human_name, env: environment
-        
-        MUTEX.synchronize do 
+
+        MUTEX.synchronize do
           new_metrics = args.map do | m |
             m = parse_metric( m )
             
             computer_class =
               "#{ m[ :unit ].to_s.capitalize }MetricComputer".constantize
-            computer_class.new( m, dimensions )
+            computer_class.new( m, @dimensions.last )
           end
-
+            
           @metrics.concat new_metrics
- 
-          if block_given?
-            @metrics.each( &:start )
-            yield
-            @metrics.each( &:stop )
-          end
-
         end
+
+        if block_given?
+          @metrics.each( &:start )
+          yield
+          @metrics.each( &:stop )
+        end
+      end
+
+      def clear_idle_computers
+        @metrics = @metrics.select{ | m | m.state != "idle" }
       end
 
       def parse_metric ( arr )

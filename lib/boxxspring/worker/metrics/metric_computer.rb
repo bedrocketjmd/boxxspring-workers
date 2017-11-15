@@ -1,14 +1,11 @@
 class MetricComputer
 
-  PERMITTED_METRIC_NAMES = [ "Messages", "Invocations", "Failures", "Errors" ]
-  PERMITTED_METRIC_UNITS =  { 
-      "counted": [ :count ], 
-      "timed": [ :microseconds ] 
-    } 
-  
-
   def dimensions
     @dimensions ||= {}
+  end
+  
+  def state
+    @state ||= "idle"
   end
 
   def name
@@ -25,27 +22,17 @@ class MetricComputer
 
   def initialize( hash, dimensions )
     @name, @value, @unit = hash.values
+    @state = "idle"
     @dimensions = dimensions
-
-    unless name.in?( PERMITTED_METRIC_NAMES ) && \
-      unit.in?( PERMITTED_METRIC_UNITS.values.flatten )
-      
-      raise "A metric #{ name } #{ value } #{ unit } is not permitted."
-    
-    end
   end
 
-  def start
-    unless unit.in?( PERMITTED_METRIC_UNITS[ :counted ] )
-      @value = Time.now
-    end
+  def to_json
+    {
+      metric_name: name.to_s.capitalize,
+      dimensions: dimensions,
+      value: value.to_i,
+      unit: unit.to_s.capitalize
+    }
   end
-
-  def stop 
-    unless unit.in?( PERMITTED_METRIC_UNITS[ :counted ] )
-      @value = Time.now - @value
-    end
-  end
-
 end
 

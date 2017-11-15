@@ -1,16 +1,17 @@
 class MicrosecondsMetricComputer < MetricComputer
   
-  def to_json
-    {
-      metric_name: name,
-      dimensions: dimensions,
-      value: compute_value,
-      unit: unit.to_s.capitalize
-    }
+  def value 
+    @value * 1000000
   end
 
-  private; def compute_value
-    @value * 1000000
+  def start
+    @start_time = Time.now
+    @state = "running"
+  end
+
+  def stop 
+    @value = Time.now - @start_time
+    @state = "idle"
   end
 
 end
