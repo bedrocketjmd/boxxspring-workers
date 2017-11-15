@@ -70,6 +70,9 @@ module Boxxspring
 
             if payload.present?
               begin
+                metric_defaults name: self.human_name, env: environment 
+                metric "Messages"
+                
                 result = self.process_payload( payload )
                 # note: if an exception is raised the message will be deleted
                 self.delete_message( message ) unless result == false
@@ -153,9 +156,6 @@ module Boxxspring
 
       protected; def process_payload( payload )
         if self.class.processor.present?
-          metric_defaults name: self.human_name, env: environment 
-          metric "Messages"
-              
           self.class.processor.call( payload )
         else
           raise RuntimeError.new(
