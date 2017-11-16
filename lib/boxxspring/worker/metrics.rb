@@ -79,7 +79,8 @@ module Boxxspring
       def metric ( *args )
         args = [ args ] unless args.first.is_a? Array
         computers = args.map do | metric |
-          parsed_metric = parse_metric( metric )            
+          parsed_metric = parse_metric( metric )  
+
           computer_class =
             "#{ parsed_metric[ :unit ].to_s.capitalize }MetricComputer".constantize
           computer_class.new( parsed_metric, @dimensions.last )
