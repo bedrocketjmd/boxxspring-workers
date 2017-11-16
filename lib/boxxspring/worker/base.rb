@@ -63,8 +63,8 @@ module Boxxspring
       # operations
 
       def process
-         metric_defaults worker_name: self.class.name, 
-                         environment: environment do 
+         metric_defaults  dimensions: { worker_name: self.class.name, 
+                                        environment: environment } do 
 
           messages = self.receive_messages() || []
           messages.each do | message |
