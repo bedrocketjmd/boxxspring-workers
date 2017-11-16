@@ -63,8 +63,8 @@ module Boxxspring
                    value: ""
                  }
         
-        dimensions.last.each{ | d | new_dimensions << d.dup } \
-          unless dimensions.empty?
+        #dimensions.last.each{ | d | new_dimensions << d.dup } \
+        #  unless dimensions.empty?
 
          args.each do | k, v |
            dimension = schema.clone
