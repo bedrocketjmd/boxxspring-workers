@@ -25,20 +25,24 @@ module Boxxspring
           loop do 
             unless @metrics.empty?
               begin
-                metrics_payload = []
+                idle_metrics = []
+                running_metrics = []
                 
                 MUTEX.synchronize do
-                  @metrics.delete_if do | m |
-                    metrics_payload << m.dup if m.idle?
-                    m.idle?
+                  @metrics.each{ | m | idle_metrics << m.dup }
+                  
+                  idle_metrics.delete_if do | m |
+                    running_metrics << m.dup if !m.idle?
+                    !m.idle?
                   end
 
-                  metrics_payload = metrics_payload.map( &:to_json )
+                  idle_metrics = idle_metrics.map( &:to_json )
+                  @metrics = running_metrics
                 end
 
                 client.put_metric_data( {
                   namespace: 'Unimatrix/Worker',
-                  metric_data: metrics_payload
+                  metric_data: idle_metrics
                 } )
 
               rescue Error => e
@@ -100,10 +104,6 @@ module Boxxspring
           yield
           @metrics.each( &:stop )
         end
-      end
-
-      def clear_idle_computers
-        @metrics = @metrics.select{ | m | m.state != "idle" }
       end
 
       def parse_metric ( arr )
