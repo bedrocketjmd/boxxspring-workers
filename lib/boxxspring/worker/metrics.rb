@@ -75,12 +75,11 @@ module Boxxspring
          end
 
          dimensions.push new_dimensions
-
          yield if block_given?
       end
 
 
-      #metric :invocations", :seconds
+      #metric :invocations, :seconds
       #metric ( [ :invocations", 1, :seconds ], [ :failures, 1 ] )
       #metric error, 2, :count
 
@@ -104,6 +103,8 @@ module Boxxspring
           yield
           @metrics.each( &:stop )
         end
+
+        @dimensions.pop
       end
 
       def parse_metric ( arr )
