@@ -27,10 +27,13 @@ module Boxxspring
               begin
                 metrics_payload = []
                 
-                MUTEX.synchronize do 
-                  idle_computers = @metrics.select{ | m | m.state == "idle" }
-                  metrics_payload = idle_computers.map( &:to_json )
-                  clear_idle_computers
+                MUTEX.synchronize do
+                  @metrics.delete_if do | m |
+                    metrics_payload << m.dup if m.idle?
+                    m.idle?
+                  end
+
+                  metrics_payload = metrics_payload.map( &:to_json )
                 end
 
                 client.put_metric_data( {
