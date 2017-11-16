@@ -1,48 +1,40 @@
 require 'thread'
 
 module Boxxspring
+  
   module Worker
+  
     module Metrics
       
-      MUTEX = Mutex.new 
+      METRICS_MUTEX = Mutex.new 
+      
+      def metrics_client
+        @metrics_client ||= Aws::CloudWatch::Client.new
+      end
 
-      def client
-        @client ||= Aws::CloudWatch::Client.new
-      end
-      
-      def initialize_metrics
-        @metrics = []
-      end
-      
       def dimensions
         @dimensions ||= []
       end
       
-      def initialize
-        initialize_metrics
+      def initialize( *args )
+        super
+
+        @metrics = []
 
         Thread.new do
           loop do 
             unless @metrics.empty?
               begin
-                idle_metrics = []
-                running_metrics = []
+                metrics_payload = nil 
                 
-                MUTEX.synchronize do
-                  @metrics.each{ | m | idle_metrics << m.dup }
-                  
-                  idle_metrics.delete_if do | m |
-                    running_metrics << m.dup if !m.idle?
-                    !m.idle?
-                  end
-
-                  idle_metrics = idle_metrics.map( &:to_json )
-                  @metrics = running_metrics
+                METRICS_MUTEX.synchronize do
+                  metrics_payload = @metrics
+                  @metrics = []
                 end
 
-                client.put_metric_data( {
+                metrics_client.put_metric_data( {
                   namespace: 'Unimatrix/Worker',
-                  metric_data: idle_metrics
+                  metric_data: metrics_payload
                 } )
 
               rescue Error => e
@@ -56,15 +48,15 @@ module Boxxspring
         end
       end
 
-      def set_metric_defaults( **args )
+      def metric_defaults( **args )
         new_dimensions = []
         schema = {
                    name: "",
                    value: ""
                  }
         
-        #dimensions.last.each{ | d | new_dimensions << d.dup } \
-        #  unless dimensions.empty?
+        dimensions.last.each{ | d | new_dimensions << d.dup } \
+          unless dimensions.empty?
 
          args.each do | k, v |
            dimension = schema.clone
@@ -76,6 +68,7 @@ module Boxxspring
 
          dimensions.push new_dimensions
          yield if block_given?
+         dimensions.pop
       end
 
 
@@ -85,26 +78,25 @@ module Boxxspring
 
       def metric ( *args )
         args = [ args ] unless args.first.is_a? Array
-
-        MUTEX.synchronize do
-          new_metrics = args.map do | m |
-            m = parse_metric( m )
-            
-            computer_class =
-              "#{ m[ :unit ].to_s.capitalize }MetricComputer".constantize
-            computer_class.new( m, @dimensions.last )
-          end
-            
-          @metrics.concat new_metrics
+        computers = args.map do | metric |
+          parsed_metric = parse_metric( metric )            
+          computer_class =
+            "#{ parsed_metric[ :unit ].to_s.capitalize }MetricComputer".constantize
+          computer_class.new( parsed_metric, @dimensions.last )
         end
 
         if block_given?
-          @metrics.each( &:start )
+          computers.each( &:start )
           yield
-          @metrics.each( &:stop )
+          computers.each( &:stop )
         end
 
-        @dimensions.pop
+        METRICS_MUTEX.synchronize do
+          @metrics = @metrics.concat( 
+            computers.map( &:to_json ).delete_if { | json | json.blank? } 
+          ) 
+        end 
+
       end
 
       def parse_metric ( arr )

@@ -4,10 +4,6 @@ class MetricComputer
     @dimensions ||= {}
   end
   
-  def state
-    @state ||= "idle"
-  end
-
   def name
     @name ||= ""
   end
@@ -20,13 +16,8 @@ class MetricComputer
     @unit ||= ""
   end
 
-  def idle?
-    @state == "idle"
-  end
-
   def initialize( hash, dimensions )
     @name, @value, @unit = hash.values
-    @state = "idle"
     @dimensions = dimensions
   end
 
