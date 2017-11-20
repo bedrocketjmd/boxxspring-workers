@@ -7,7 +7,8 @@ module Boxxspring
     module Metrics
       
       METRICS_MUTEX = Mutex.new 
-      METRICS_CLIENT = Aws::CloudWatch::Client.new
+      METRICS_CLIENT = Aws::CloudWatch::Client.new 
+      METRICS_UPLOAD_INTERVAL = 1
       
       def initialize( *arguments )
         super
@@ -16,30 +17,34 @@ module Boxxspring
         @metric_defaults = [ {} ]
 
         Thread.new do
-          loop do 
-            unless @metrics.empty?
-              begin
-                metrics_payload = nil 
-                
-                METRICS_MUTEX.synchronize do
-                  metrics_payload = @metrics
-                  @metrics = []
-                end
-                
-                METRICS_CLIENT.put_metric_data( {
-                  namespace: 'Unimatrix/Worker',
-                  metric_data: metrics_payload
-                } )
+          upload_metrics
+        end
+      end
 
-              rescue Error => e
-                logger.error( 
-                  "An error has occured when making a request to the AWS " +
-                  "Cloudwatch endpoint 'put_metric_data'." 
-                )
+      def upload_metrics
+        loop do 
+          unless @metrics.empty?
+            begin
+              metrics_payload = nil 
+              
+              METRICS_MUTEX.synchronize do
+                metrics_payload = @metrics
+                @metrics = []
               end
+              
+              METRICS_CLIENT.put_metric_data( {
+                namespace: 'Unimatrix/Worker',
+                metric_data: metrics_payload
+              } )
 
-              sleep 1 
+            rescue Error => e
+              logger.error( 
+                "An error has occured when making a request to the AWS " +
+                "Cloudwatch endpoint 'put_metric_data'." 
+              )
             end
+
+            sleep METRICS_UPLOAD_INTERVAL 
           end
         end
       end
