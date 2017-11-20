@@ -63,28 +63,38 @@ module Boxxspring
       # operations
 
       def process
-        messages = self.receive_messages() || []
-        messages.each do | message |
-          if message.present?
-            payload = self.payload_from_message( message )
+         metric_defaults  dimensions: { worker_name: self.class.name, 
+                                        environment: environment } do 
 
-            if payload.present?
-              begin
-                result = self.process_payload( payload )
-                # note: if an exception is raised the message will be deleted
-                self.delete_message( message ) unless result == false
-              rescue StandardError => error
+          messages = self.receive_messages() || []
+          messages.each do | message |
+            if message.present?
+              payload = self.payload_from_message( message )
+
+              if payload.present?
+                begin
+                  metric :messages do 
+                    result = self.process_payload( payload )
+                    
+                    # note: if an exception is raised the message will be deleted
+                    self.delete_message( message ) unless result == false
+                  end
+                rescue StandardError => error
+                  metric :errors 
+
+                  self.logger.error(
+                    "The #{ self.human_name } failed to process the payload."
+                  )
+                  self.logger.error( error.message )
+                  self.logger.info( error.backtrace.join( "\n" ) )
+                end
+
+              else
+                self.delete_message( message )
                 self.logger.error(
-                  "The #{ self.human_name } failed to process the payload."
+                  "The #{ self.human_name } received an invalid payload."
                 )
-                self.logger.error( error.message )
-                self.logger.info( error.backtrace.join( "\n" ) )
               end
-            else
-              self.delete_message( message )
-              self.logger.error(
-                "The #{ self.human_name } received an invalid payload."
-              )
             end
           end
         end

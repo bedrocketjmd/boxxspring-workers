@@ -1,111 +1,95 @@
 require 'thread'
 
 module Boxxspring
+  
   module Worker
+  
     module Metrics
       
-      PERMITTED_METRIC_NAMES = [ "Messages", "Invocations", "Failures", "Errors" ]
-      PERMITTED_METRIC_UNITS = [ "Count", "Duration" ]
+      METRICS_MUTEX = Mutex.new 
+      METRICS_CLIENT = Aws::CloudWatch::Client.new 
+      METRICS_UPLOAD_INTERVAL = 1
       
-      MUTEX = Mutex.new 
+      def initialize( *arguments )
+        super
 
-      def client
-        @client ||= Aws::CloudWatch::Client.new
-      end
-      
-      def dimensions
-        @dimensions ||= {}
-      end
-
-      def initialize_metrics_count
-        @metrics ||= refresh_metrics_count
-      end
-
-      def initialize
-        initialize_metrics_count
+        @metrics = []
+        @metric_defaults = [ {} ]
 
         Thread.new do
-          loop do 
-            sleep(1)
-            
-            unless @metrics[ "empty" ]
-              if MUTEX.lock()
-                begin
+          upload_metrics
+        end
+      end
+
+      def upload_metrics
+        loop do 
+          unless @metrics.empty?
+            begin
+              metrics_payload = nil 
               
-                  client.put_metric_data( {
-                    namespace: 'Unimatrix/Worker',
-                    metric_data: format_metrics( @metrics )
-                  } )
-
-                  @metrics = refresh_metrics_count
-
-                ensure
-                  MUTEX.unlock
-                end
+              METRICS_MUTEX.synchronize do
+                metrics_payload = @metrics
+                @metrics = []
               end
-            end
-          end
-        end
-      end
-
-      def metric ( *args, **keyword_args )
-        Thread.new do
-          begin
-            if MUTEX.lock()
               
-              @dimensions = keyword_args[ :dimensions ] \
-                if keyword_args.key?( :dimensions )
+              METRICS_CLIENT.put_metric_data( {
+                namespace: 'Unimatrix/Worker',
+                metric_data: metrics_payload
+              } )
 
-              args.each do | metric_hash |
-                name, unit = metric_hash.first
-
-                if name.in?( PERMITTED_METRIC_NAMES ) && unit.in?( PERMITTED_METRIC_UNITS )
-                  @metrics[ "empty" ] = false
-                  @metrics[ name ][ unit ] = @metrics[ name ][ unit ] + 1 
-                end
-
-              end
+            rescue Error => e
+              logger.error( 
+                "An error has occured when making a request to the AWS " +
+                "Cloudwatch endpoint 'put_metric_data'." 
+              )
             end
-          ensure
-            MUTEX.unlock();
-            yield if block_given?  
 
+            sleep METRICS_UPLOAD_INTERVAL 
           end
         end
       end
 
-      protected; def refresh_metrics_count
-        hash = Hash[ PERMITTED_METRIC_NAMES.map { | name |
-          [ name, Hash[ PERMITTED_METRIC_UNITS.map { | unit |
-            [ unit, 0 ]
-           } ] ] 
-        } ]
-        
-        hash[ "empty" ] = true
-        
-        hash
+      def metric_defaults( defaults = {} )
+        previous_defaults = @metric_defaults.last 
+        @metric_defaults.push( previous_defaults.merge( defaults ) )
+
+        yield
+        @metric_defaults.pop
+
       end
 
-      protected; def format_metrics ( counts )
-        formatted_metrics = []
-        @metrics.delete( 'empty' )
+      def metric ( *arguments )
+        arguments = [ arguments ] unless arguments.first.is_a? Array
+        computers = arguments.map do | metric |
+          parsed_metric = parse_metric( metric )  
 
-        @metrics.each do | name, units_hash |
-          units_hash.each do | unit, count |
-            if count > 0
-
-              formatted_metrics << { 
-                metric_name: name,
-                dimensions: @dimensions,
-                value: count,
-                unit: unit
-              }
-            
-            end
-          end
+          computer_class =
+            "#{ parsed_metric[ :unit ].to_s.capitalize }MetricComputer".constantize
+          computer_class.new( parsed_metric, @metric_defaults.last )
         end
 
-        formatted_metrics
+        if block_given?
+          computers.each( &:start )
+          yield
+          computers.each( &:stop )
+        end
+
+        METRICS_MUTEX.synchronize do
+          @metrics = @metrics.concat( 
+            computers.map( &:to_json ).delete_if { | json | json.blank? } 
+          ) 
+        end 
+
+      end
+
+      private; def parse_metric ( unparsed_metrics )
+        name, data, unit = unparsed_metrics.first, 1, :count
+
+        data = unparsed_metrics[ 1 ] if unparsed_metrics[ 1 ].is_a? Integer
+        unit = unparsed_metrics[ 1 ] if unparsed_metrics[ 1 ].is_a? Symbol
+        unit = unparsed_metrics[ 2 ] unless unparsed_metrics[ 2 ].nil?
+
+        { name: name, data: data, unit: unit }
       end
 
     end
