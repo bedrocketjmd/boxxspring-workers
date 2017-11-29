@@ -19,6 +19,7 @@ Gem::Specification.new do | gem |
   gem.files          = Dir.glob( "{lib}/**/*" )
 
   gem.add_runtime_dependency( "aws-sdk", "~> 2" )
+  gem.add_runtime_dependency( "cloudwatchlogger", "~> 0.1.1" )
   gem.add_runtime_dependency( "boxxspring", "~> 2" )
   gem.add_runtime_dependency( "redis", "~> 3.2.1" )
   gem.add_runtime_dependency( "remote_syslog_logger", "~> 1.0" )

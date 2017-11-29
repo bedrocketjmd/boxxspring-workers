@@ -1,30 +1,23 @@
 module Boxxspring
-
   module Worker
-
     module Logging
 
       PWD = Dir.pwd.freeze
 
       def logger
-
         @logger ||= begin
-
           workers_env = ENV[ 'WORKERS_ENV' ]
 
           if Worker.configuration.include?( 'logger' )
-
            logger = Worker.configuration.logger
-
           else
 
             if self.log_local? || workers_env == 'test'
-
               logger = Logger.new( STDOUT )
-
             else
 
               group_name = self.log_group_name
+
               raise 'A logging group is required. You may need to set LOG_GROUP.' \
                 unless group_name.present?
 
@@ -49,15 +42,12 @@ module Boxxspring
               )
 
             end
-
-
           end
-
           logger.level = self.log_level
+
           logger
 
         end
-
       end
 
       protected; def log_group_name
@@ -87,9 +77,7 @@ module Boxxspring
         log_local = ENV[ 'LOG_LOCAL' ] || 'false'
         ( log_local.to_s =~ /^true$/i ) == 0
       end
-
+    
     end
-
   end
-
 end
