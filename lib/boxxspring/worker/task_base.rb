@@ -75,9 +75,8 @@ module Boxxspring
         result
       end
 
+      #REVISE!
       protected; def task_read( property_id, task )
-        # why did this not work?
-        # self.task_operation( property_id ).where( id: task.uuid ).read
         Boxxspring::Operation.new(
           "/properties/#{ property_id }/tasks/#{ task.uuid }",
           Worker.configuration.api_credentials.to_hash
