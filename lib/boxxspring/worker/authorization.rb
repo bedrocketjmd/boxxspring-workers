@@ -17,7 +17,7 @@ module Boxxspring
           end
         end
 
-        private; def token
+        protected; def token
           @authorization_token ||= begin
              Unimatrix::Authorization::ClientCredentialsGrant.new(
                client_id:     ENV[ 'KEYMAKER_CLIENT' ],
@@ -26,7 +26,7 @@ module Boxxspring
           end
         end
 
-        private; def token!
+        protected; def token!
           @authorization_token = nil
           token
         end

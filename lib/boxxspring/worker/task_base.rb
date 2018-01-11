@@ -75,16 +75,12 @@ module Boxxspring
         result
       end
 
-      #REVISE!
-      protected; def task_read( property_id, task )
-        Boxxspring::Operation.new(
-          "/properties/#{ property_id }/tasks/#{ task.uuid }",
-          Worker.configuration.api_credentials.to_hash
-        ).read
+      protected; def task_read( task )
+        self.unimatrix_operation( "/realms/#{ task.realm_uuid }/tasks/#{ task.uuid }" ).read
       end
 
       protected; def task_write( task )
-        self.task_operation( task.property_id ).write( 'tasks', task ).first
+        self.unimatrix_operation( "/realms/#{ task.realm_uuid }/tasks" ).write( 'tasks', task )
       end
 
       protected; def task_write_state( task, state, message )
@@ -95,37 +91,13 @@ module Boxxspring
         self.task_write( task )
       end
 
-      protected; def task_operation( property_id )
-        Boxxspring::Operation.new(
-          "/properties/#{ property_id }/tasks",
-          Worker.configuration.api_credentials.to_hash
+      protected; def unimatrix_operation( endpoint, args = {} )
+        Unimatrix::Operation.new(
+            endpoint,
+            args.merge( { access_token: token } )
         )
-      end
-
-      protected; def task_property_read( task, include = nil )
-        operation = Boxxspring::Operation.new(
-          "/properties/#{ task.property_id }",
-          Worker.configuration.api_credentials.to_hash
-        )
-        operation = operation.include( include ) \
-          unless ( include.blank? )
-        operation.read
-      end
-
-      protected; def task_delegate( queue_name, task )
-        serializer = Boxxspring::Serializer.new( task )
-        payload = serializer.serialize( 'tasks' )
-        payload.merge!( {
-          '$this' => {
-            'type_name' => 'tasks',
-            'unlimited_count' => 1
-          }
-        } )
-        self.delegate_payload( queue_name, payload )
       end
 
     end
-
   end
-
 end
