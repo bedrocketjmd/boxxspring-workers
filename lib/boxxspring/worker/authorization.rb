@@ -1,16 +1,7 @@
 module Boxxspring
   module Worker
-
-    class AuthorizationError < Error
-        def initialize( message = nil )
-            super(
-                "Error: The worker is not authorized to perform one or more operations."
-            )
-        end
-     end
-
      module Authorization
-        def authorized( &block )
+        def authorize( &block )
 
           begin
             block.call( token )
@@ -41,5 +32,12 @@ module Boxxspring
         end
 
     end
+    class AuthorizationError < Error
+        def initialize( message = nil )
+            super(
+                "Error: The worker is not authorized to perform one or more operations."
+            )
+        end
+     end
   end
 end
