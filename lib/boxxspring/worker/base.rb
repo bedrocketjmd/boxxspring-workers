@@ -98,6 +98,7 @@ module Boxxspring
               end
             end
           end
+          sleep 1 if messages.blank?
         end
       end
 
