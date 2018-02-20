@@ -44,8 +44,9 @@ module Boxxspring
               )
             end
 
-            sleep METRICS_UPLOAD_INTERVAL 
           end
+            
+          sleep METRICS_UPLOAD_INTERVAL 
         end
       end
 
