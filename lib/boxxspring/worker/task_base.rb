@@ -4,6 +4,8 @@ module Boxxspring
 
     class TaskBase < Base
 
+      include Unimatrix::Blueprintable
+
       #------------------------------------------------------------------------
       # class attributes
 
