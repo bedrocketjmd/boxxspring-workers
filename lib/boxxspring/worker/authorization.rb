@@ -18,6 +18,16 @@ module Boxxspring
           end
         end
 
+        def authorize_operation( result = nil, error_message = nil )
+          result = yield if block_given?
+
+          if result.is_a?( Array ) && result.first.is_a?( Unimatrix::ForbiddenError )
+            raise AuthorizationError, error_message
+          end
+
+          result
+        end
+
         protected; def token
           @authorization_token ||= begin
              Unimatrix::Authorization::ClientCredentialsGrant.new(
