@@ -76,11 +76,18 @@ module Boxxspring
       end
 
       protected; def task_read( task )
-        self.unimatrix_operation( "/realms/#{ task.realm_uuid }/tasks/#{ task.uuid }" ).read
+        authorize_operation do
+          self.unimatrix_operation(
+            "/realms/#{ task.realm_uuid }/tasks/#{ task.uuid }"
+          ).read
+        end
       end
 
       protected; def task_write( task )
-        self.unimatrix_operation( "/realms/#{ task.realm_uuid }/tasks" ).write( 'tasks', task )
+        authorize_operation do
+          self.unimatrix_operation( "/realms/#{ task.realm_uuid }/tasks" ).
+            write( 'tasks', task )
+        end
       end
 
       protected; def task_write_state( task, state, message )
@@ -93,8 +100,8 @@ module Boxxspring
 
       protected; def unimatrix_operation( endpoint, args = {} )
         Unimatrix::Operation.new(
-            endpoint,
-            args.merge( { access_token: token } )
+          endpoint,
+          args.merge( { access_token: token } )
         )
       end
 
