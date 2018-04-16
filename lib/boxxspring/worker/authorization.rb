@@ -1,20 +1,31 @@
 module Boxxspring
+
   module Worker
+
      module Authorization
+
         def authorize( &block )
-
           begin
+            retries ||= 3
             block.call( token )
-          rescue AuthorizationError => exception
-            retries -= 1
-
-            if retries > 0
+          rescue Unimatrix::AuthorizationError => exception
+            if ( retries -= 1 ) > 0
               token!
               retry
             else
-                raise exception
+              raise exception
             end
           end
+        end
+
+        def authorize_operation( result = nil, error_message = nil )
+          result = yield if block_given?
+
+          if result.is_a?( Array ) && result.first.is_a?( Unimatrix::ForbiddenError )
+            raise Unimatrix::AuthorizationError, error_message
+          end
+
+          result
         end
 
         protected; def token
@@ -32,12 +43,7 @@ module Boxxspring
         end
 
     end
-    class AuthorizationError < Error
-        def initialize( message = nil )
-            super(
-                "Error: The worker is not authorized to perform one or more operations."
-            )
-        end
-     end
+
   end
+
 end
