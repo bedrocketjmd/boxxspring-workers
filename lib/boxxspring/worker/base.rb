@@ -69,6 +69,9 @@ module Boxxspring
 
           messages = self.receive_messages() || []
           messages.each do | message |
+            
+            logger.info( message['message_id'] )
+            
             if message.present?
               payload = self.payload_from_message( message )
 
