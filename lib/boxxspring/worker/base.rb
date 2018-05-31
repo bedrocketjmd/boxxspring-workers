@@ -70,34 +70,55 @@ module Boxxspring
           messages = self.receive_messages() || []
           messages.each do | message |
             
-            if message.present?
-              payload = self.payload_from_message( message )
-
-              if payload.present?
-                begin
-                  metric :messages do
-                    result = self.process_payload( payload )
-
-                    # note: if an exception is raised the message will be deleted
-                    self.delete_message( message ) unless result == false
+            mutex = Synchronization::Mutex.new(
+              "message/#{ message[ 'message_id' ] }"
+            )
+            
+            if mutex.lock( { ttl: 60.minutes } )
+              begin
+                if message.present?
+                  payload = self.payload_from_message( message )
+                
+                  if payload.present?
+                    begin
+                      metric :messages do
+                        result = self.process_payload( payload )
+                
+                        # note: if an exception is raised the message will be deleted
+                        self.delete_message( message ) unless result == false
+                      end
+                    rescue StandardError => error
+                      metric :errors
+                
+                      self.logger.error(
+                        "The #{ self.human_name } failed to process the payload."
+                      )
+                      self.logger.error( error.message )
+                      self.logger.info( error.backtrace.join( "\n" ) )
+                    end
+                
+                  else
+                    self.delete_message( message )
+                    self.logger.error(
+                      "The #{ self.human_name } received an invalid payload."
+                    )
                   end
-                rescue StandardError => error
-                  metric :errors
-
-                  self.logger.error(
-                    "The #{ self.human_name } failed to process the payload."
-                  )
-                  self.logger.error( error.message )
-                  self.logger.info( error.backtrace.join( "\n" ) )
                 end
-
-              else
-                self.delete_message( message )
-                self.logger.error(
-                  "The #{ self.human_name } received an invalid payload."
-                )
+              rescue Exception => lock_error
+                logger.error( lock_error.message )
+                logger.error( lock_error.backtrace.join( "\n" ) )
+              ensure
+                logger.warn( "message/#{ message[ 'message_id' ] } has been unlocked." )
+                mutex.unlock
               end
+            else 
+              logger.info(
+                "Mutex #{ mutex.instance_variable_get( "@name" ) } is locked."
+              )
+              
+              self.delete_message( message )
             end
+          
           end
         end
       end
