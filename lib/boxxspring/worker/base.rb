@@ -108,7 +108,6 @@ module Boxxspring
                 logger.error( lock_error.message )
                 logger.error( lock_error.backtrace.join( "\n" ) )
               ensure
-                logger.warn( "message/#{ message[ 'message_id' ] } has been unlocked." )
                 mutex.unlock
               end
             else 
