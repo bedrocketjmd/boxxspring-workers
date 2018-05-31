@@ -158,6 +158,7 @@ module Boxxspring
           logger.error( "The message lacks a payload." )
           logger.debug( message.inspect )
         end
+        payload['message'] = message['message_id']
         payload
       end
 

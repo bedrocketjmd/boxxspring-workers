@@ -29,6 +29,7 @@ module Boxxspring
       protected; def process_payload( payload )
         result = true
         task = payload[ 'tasks' ].first
+        task['message'] = payload['message']
 
         task_type_name = self.human_name.split( " " )
         task_type_name.pop
