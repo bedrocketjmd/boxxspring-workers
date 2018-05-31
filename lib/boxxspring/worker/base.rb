@@ -86,6 +86,7 @@ module Boxxspring
                 
                         # note: if an exception is raised the message will be deleted
                         self.delete_message( message ) unless result == false
+                        logger.info( "After deleting the message" )
                       end
                     rescue StandardError => error
                       metric :errors
