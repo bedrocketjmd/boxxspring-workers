@@ -55,7 +55,9 @@ module Boxxspring
           queue_name = self.queue_name ||
                        self.name.underscore.gsub( /[\/]/, '-' ).
                          gsub( /_worker\Z/, '' )
-          self.environment + '-' + queue_name
+          full_name = self.environment + '-' + queue_name
+          
+          ENV[ 'PRIORITY' ] ? ( full_name + '_priority' ) : full_name
         end
 
       end
