@@ -28,8 +28,10 @@ module Boxxspring
               metrics_payload = nil
 
               METRICS_MUTEX.synchronize do
-                logger.info( "Metrics queue has #{@metrics.count} metrics" ) \
-                  if @metrics.count > 20
+                if @metrics.count > 20
+                  logger.info( "Metrics queue has #{ @metrics.count } metrics" )
+                end
+
                 metrics_payload = @metrics.shift(20)
               end
 
@@ -38,11 +40,11 @@ module Boxxspring
                 metric_data: metrics_payload
               } )
 
-            rescue => e
+            rescue => error
               logger.error(
                 "An error has occured when making a request to the AWS " +
                 "Cloudwatch endpoint 'put_metric_data'. - Error message: " +
-                "#{ e.message }"
+                "#{ error.message }"
               )
             end
 
