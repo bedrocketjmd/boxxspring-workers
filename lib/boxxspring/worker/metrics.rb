@@ -1,15 +1,15 @@
 require 'thread'
 
 module Boxxspring
-  
+
   module Worker
-  
+
     module Metrics
-      
-      METRICS_MUTEX = Mutex.new 
-      METRICS_CLIENT = Aws::CloudWatch::Client.new 
-      METRICS_UPLOAD_INTERVAL = 1
-      
+
+      METRICS_MUTEX = Mutex.new
+      METRICS_CLIENT = Aws::CloudWatch::Client.new
+      METRICS_UPLOAD_INTERVAL = 0.5
+
       def initialize( *arguments )
         super
 
@@ -22,36 +22,38 @@ module Boxxspring
       end
 
       def upload_metrics
-        loop do 
+        loop do
           unless @metrics.empty?
             begin
-              metrics_payload = nil 
-              
+              metrics_payload = nil
+
               METRICS_MUTEX.synchronize do
-                metrics_payload = @metrics
-                @metrics = []
+                logger.info( "Metrics queue has #{@metrics.count} metrics" ) \
+                  if @metrics.count > 20
+                metrics_payload = @metrics.shift(20)
               end
-              
+
               METRICS_CLIENT.put_metric_data( {
                 namespace: 'Unimatrix/Worker',
                 metric_data: metrics_payload
               } )
 
-            rescue Error => e
-              logger.error( 
+            rescue => e
+              logger.error(
                 "An error has occured when making a request to the AWS " +
-                "Cloudwatch endpoint 'put_metric_data'." 
+                "Cloudwatch endpoint 'put_metric_data'. - Error message: " +
+                "#{ e.message }"
               )
             end
 
           end
-            
-          sleep METRICS_UPLOAD_INTERVAL 
+
+          sleep METRICS_UPLOAD_INTERVAL
         end
       end
 
       def metric_defaults( defaults = {} )
-        previous_defaults = @metric_defaults.last 
+        previous_defaults = @metric_defaults.last
         @metric_defaults.push( previous_defaults.merge( defaults ) )
 
         yield
@@ -62,7 +64,7 @@ module Boxxspring
       def metric ( *arguments )
         arguments = [ arguments ] unless arguments.first.is_a? Array
         computers = arguments.map do | metric |
-          parsed_metric = parse_metric( metric )  
+          parsed_metric = parse_metric( metric )
 
           computer_class =
             "#{ parsed_metric[ :unit ].to_s.capitalize }MetricComputer".constantize
@@ -76,10 +78,10 @@ module Boxxspring
         end
 
         METRICS_MUTEX.synchronize do
-          @metrics = @metrics.concat( 
-            computers.map( &:to_json ).delete_if { | json | json.blank? } 
-          ) 
-        end 
+          @metrics = @metrics.concat(
+            computers.map( &:to_json ).delete_if { | json | json.blank? }
+          )
+        end
 
       end
 
