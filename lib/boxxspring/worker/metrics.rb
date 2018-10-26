@@ -28,10 +28,6 @@ module Boxxspring
               metrics_payload = nil
 
               METRICS_MUTEX.synchronize do
-                if @metrics.count > 20
-                  logger.info( "Metrics queue has #{ @metrics.count } metrics" )
-                end
-
                 metrics_payload = @metrics.shift(20)
               end
 
