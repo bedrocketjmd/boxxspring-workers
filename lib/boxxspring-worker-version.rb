@@ -1,5 +1,5 @@
 module Boxxspring
   module Worker
-    VERSION = '1.2.0'
+    VERSION = '1.5.3'
   end
 end

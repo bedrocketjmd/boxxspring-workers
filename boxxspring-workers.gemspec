@@ -18,6 +18,8 @@ Gem::Specification.new do | gem |
   gem.require_paths  = [ 'lib' ]
   gem.files          = Dir.glob( "{lib}/**/*" )
 
+  gem.add_runtime_dependency( "unimatrix" )
+  
   gem.add_runtime_dependency( "aws-sdk", "~> 2" )
   gem.add_runtime_dependency( "cloudwatchlogger", "~> 0.1.1" )
   gem.add_runtime_dependency( "boxxspring", "~> 2" )

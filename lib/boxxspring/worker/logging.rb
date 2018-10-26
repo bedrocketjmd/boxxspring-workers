@@ -38,7 +38,8 @@ module Boxxspring
                   secret_access_key: ENV[ 'AWS_SECRET_ACCESS_KEY' ]
                 },
                 group_name,
-                worker_name
+                worker_name,
+                region: ENV[ 'AWS_REGION' ]
               )
 
             end
@@ -77,7 +78,7 @@ module Boxxspring
         log_local = ENV[ 'LOG_LOCAL' ] || 'false'
         ( log_local.to_s =~ /^true$/i ) == 0
       end
-    
+
     end
   end
 end

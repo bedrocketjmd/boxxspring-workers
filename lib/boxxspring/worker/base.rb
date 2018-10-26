@@ -12,6 +12,7 @@ module Boxxspring
 
       include Logging
       include Metrics
+      include Authorization
 
       #------------------------------------------------------------------------
       # class attributes
@@ -54,7 +55,9 @@ module Boxxspring
           queue_name = self.queue_name ||
                        self.name.underscore.gsub( /[\/]/, '-' ).
                          gsub( /_worker\Z/, '' )
-          self.environment + '-' + queue_name
+          full_name = self.environment + '-' + queue_name
+          
+          ENV[ 'PRIORITY' ] ? ( full_name + '_priority' ) : full_name
         end
 
       end
@@ -63,8 +66,8 @@ module Boxxspring
       # operations
 
       def process
-         metric_defaults  dimensions: { worker_name: self.class.name, 
-                                        environment: environment } do 
+         metric_defaults  dimensions: { worker_name: self.class.name,
+                                        environment: environment } do
 
           messages = self.receive_messages() || []
           messages.each do | message |
@@ -73,14 +76,14 @@ module Boxxspring
 
               if payload.present?
                 begin
-                  metric :messages do 
+                  metric :messages do
                     result = self.process_payload( payload )
-                    
+
                     # note: if an exception is raised the message will be deleted
                     self.delete_message( message ) unless result == false
                   end
                 rescue StandardError => error
-                  metric :errors 
+                  metric :errors
 
                   self.logger.error(
                     "The #{ self.human_name } failed to process the payload."
@@ -138,7 +141,7 @@ module Boxxspring
       end
 
       protected; def payload_from_message( message )
-        
+
         payload = message.body
 
         if payload.present?
@@ -151,7 +154,7 @@ module Boxxspring
               payload
           end
         else
-          logger.error( "The message lacks a payload." ) 
+          logger.error( "The message lacks a payload." )
           logger.debug( message.inspect )
         end
         payload
