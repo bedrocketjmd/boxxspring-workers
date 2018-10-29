@@ -83,7 +83,7 @@ module Boxxspring
                     self.delete_message( message ) unless result == false
                   end
                 rescue StandardError => error
-                  metric :errors
+                  metric :error
 
                   self.logger.error(
                     "The #{ self.human_name } failed to process the payload."
