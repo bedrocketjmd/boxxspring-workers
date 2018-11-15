@@ -1,7 +1,7 @@
 class MetricComputer
   
   def name
-    @name ||= ""
+    @name ||= ''
   end
   
   def value
@@ -9,7 +9,7 @@ class MetricComputer
   end
   
   def unit
-    @unit ||= ""
+    @unit ||= ''
   end
 
   def initialize( hash, defaults )

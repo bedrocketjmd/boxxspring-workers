@@ -1,5 +1,4 @@
 module Boxxspring
-
   module Worker
 
     QUEUE_MESSAGE_REQUEST_COUNT   = 10
@@ -193,7 +192,6 @@ module Boxxspring
         end
       end
 
-      # Meta API read & error handling
       protected; def read_object( property_id=nil, type, id, includes )
         if property_id.present?
           endpoint = "/properties/#{ property_id }/#{ type.pluralize }/#{ id }"

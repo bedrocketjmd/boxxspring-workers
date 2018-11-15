@@ -1,9 +1,3 @@
-#
-# module. Synchronization
-#
-# The synchornization module implements lock/unlock and key/value read/write 
-# operations accross multiple instances of the application.
-
 module Boxxspring
   module Synchronization
 

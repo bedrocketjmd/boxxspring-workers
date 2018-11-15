@@ -67,8 +67,8 @@ module Boxxspring
         level = Logger::WARN
         if ENV[ 'LOG_LEVEL' ].present?
           level = ENV[ 'LOG_LEVEL' ].upcase
-          raise "An unkown log level was specificed by LOG_LEVEL." \
-            unless [ "INFO", "WARN", "ERROR", "DEBUG", "FATAL" ].include?( level )
+          raise 'An unkown log level was specificed by LOG_LEVEL.' \
+            unless [ 'INFO', 'WARN', 'ERROR', 'DEBUG', 'FATAL' ].include?( level )
           level = "Logger::#{ level }".constantize
         end
         level

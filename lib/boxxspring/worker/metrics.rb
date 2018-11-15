@@ -1,9 +1,7 @@
 require 'thread'
 
 module Boxxspring
-
   module Worker
-
     module Metrics
 
       METRICS_MUTEX = Mutex.new
@@ -38,8 +36,8 @@ module Boxxspring
 
             rescue => error
               logger.error(
-                "An error has occured when making a request to the AWS " +
-                "Cloudwatch endpoint 'put_metric_data'. - Error message: " +
+                'An error has occured when making a request to the AWS ' +
+                'Cloudwatch endpoint "put_metric_data". - Error message: ' +
                 "#{ error.message }"
               )
             end

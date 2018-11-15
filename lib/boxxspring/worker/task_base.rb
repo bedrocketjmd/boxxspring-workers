@@ -1,7 +1,5 @@
 module Boxxspring
-
   module Worker
-
     class TaskBase < Base
 
       #------------------------------------------------------------------------
@@ -30,9 +28,9 @@ module Boxxspring
         result = true
         task = payload[ 'tasks' ].first
 
-        task_type_name = self.human_name.split( " " )
+        task_type_name = self.human_name.split( ' ' )
         task_type_name.pop
-        task_type_name = task_type_name.join( "_" ) + "_task"
+        task_type_name = task_type_name.join( '_' ) + '_task'
 
         if task.present?
           task_uuid = task[ 'uuid' ]
@@ -46,7 +44,7 @@ module Boxxspring
               begin
                 result = self.process_task( task )
                 message = "Task #{ task.uuid } processing has ended"
-                message += " and the message was retained." if result == false
+                message += ' and the message was retained.' if result == false
                 self.logger.info( message )
               rescue SignalException, StandardError => error
                 if error.is_a?( SignalException )

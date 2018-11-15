@@ -1,7 +1,5 @@
 module Boxxspring
-
   module Worker
-
     module Authorization
 
       def authorize( &block )
@@ -49,7 +47,5 @@ module Boxxspring
       end
         
     end
-
   end
-
 end

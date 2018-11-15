@@ -1,9 +1,7 @@
 require 'singleton'
 
 module Boxxspring
-
   module Worker
-
     class Configuration < Abstract
 
       include Singleton
@@ -40,7 +38,7 @@ module Boxxspring
         end
         result
       end
+      
     end
   end
-
 end
